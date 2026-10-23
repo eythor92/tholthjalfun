@@ -189,3 +189,16 @@ table.entry.codes input{min-width:160px}
 .zlab{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:-4px}
 .team-line{width:100%}
 .dash{display:inline-block;width:16px;border-top:2.5px dashed var(--muted)}
+.coach-sel{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.chip.remote small{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--long);margin-left:2px}
+.chip.remote[aria-pressed="true"] small{color:var(--bg)}
+.card.self{max-width:620px;width:100%;margin:0 auto}
+.card.self > .f{margin-bottom:12px}
+.card.self select{width:100%}
+.self-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:6px}
+.self-grid input{width:100%;font-size:18px;padding:10px 12px;font-variant-numeric:tabular-nums}
+.hint{font-size:13.5px;color:var(--muted);background:var(--soft);border-radius:8px;padding:8px 10px;margin:4px 0 10px}
+.self-zones{margin-top:14px}
+.self-zones summary{cursor:pointer;font-weight:600;color:var(--muted);font-size:14px}
+table.entry.codes select{min-width:180px}
+.add-athletes .actions select{min-width:200px}

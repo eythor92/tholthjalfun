@@ -10,13 +10,19 @@ service cloud.firestore {
     }
 
     // Hver iðkandi er eitt skjal. Kóðinn hans er nafnið á skjalinu.
-    // Iðkandi getur sótt sitt skjal ef hann veit kóðann, en ekki skoðað listann.
     match /athletes/{code} {
+      // Iðkandi getur sótt sitt skjal ef hann veit kóðann, en ekki skoðað listann.
       allow get: if true;
-      allow list, create, update, delete: if isCoach();
+      allow list, create, delete: if isCoach();
+      // Þjálfari má breyta öllu. Iðkandi í hópi 2 (fjarþjálfun) má aðeins
+      // breyta æfingatölunum sínum, ekki nafni, hópi eða röð.
+      allow update: if isCoach()
+        || (resource.data.group == 2
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'updated'])
+            && request.resource.data.data is map);
     }
 
-    // Titill verkefnisins.
+    // Titill verkefnisins og meðaltöl hópanna.
     match /meta/{doc} {
       allow read: if true;
       allow write: if isCoach();

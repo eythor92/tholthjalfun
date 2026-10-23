@@ -5,7 +5,7 @@
 
 // 1) Stillingar úr Firebase (Project settings → Your apps).
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBnDk19GnY3hdRYWq2Xn05Cgk46k1GK4A4",
+  apiKey: "AIzaSyBnDk19GnY3hdRYWq2XnO5Cgk46k1GK4A4",
   authDomain: "tholthjalfun-6318a.firebaseapp.com",
   projectId: "tholthjalfun-6318a",
   storageBucket: "tholthjalfun-6318a.firebasestorage.app",

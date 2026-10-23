@@ -52,6 +52,14 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 2. Farðu í **Skrá niðurstöður → Iðkendur og kóðar**. Skrifaðu nöfnin, eitt í hverja línu, og smelltu á **Bæta við**.
 3. Hver iðkandi fær kóða. Smelltu á **Afrita hlekk** og sendu hverjum sinn hlekk (t.d. í skilaboðum). Hlekkurinn opnar síðuna hans beint, og síminn man eftir honum.
 
+## Tveir hópar
+- **Hópur 1 · á staðnum:** þú skráir tölurnar. Iðkendur sjá bara.
+- **Hópur 2 · fjarþjálfun:** iðkendur fá flipann **Skrá æfingu** og skrá sjálfir meðalpúls, hámarkspúls og kaloríur. Í Prófi 1 skrá þeir síðasta RPM og hámarkspúls, og síðan reiknar mínúturnar. Tími í svæðum er valfrjáls.
+- Þú velur hóp þegar þú bætir við iðkendum og getur breytt honum í töflunni **Iðkendur og kóðar** (smelltu svo á **Vista breytingar**).
+- Í **Skrá niðurstöður** velurðu hópinn efst. Þú getur líka leiðrétt tölur fjariðkenda þar.
+- Hver iðkandi ber sig saman við meðaltal **síns hóps**. Meðaltal hóps 2 uppfærist þegar þú opnar þjálfarasíðuna, svo gott er að kíkja inn einu sinni til tvisvar í viku.
+- Iðkandi í hópi 2 getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
+
 ## Eftir hverja æfingu
 1. Opnaðu síðuna (þú ert áfram innskráður á tækinu).
 2. **Skrá niðurstöður** → veldu æfinguna → sláðu inn tölurnar úr Polar → **Vista æfingu**.
