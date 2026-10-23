@@ -202,3 +202,4 @@ table.entry.codes input{min-width:160px}
 .self-zones summary{cursor:pointer;font-weight:600;color:var(--muted);font-size:14px}
 table.entry.codes select{min-width:180px}
 .add-athletes .actions select{min-width:200px}
+.fhint{display:block;font-size:12.5px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);margin-top:-1px;line-height:1.35}

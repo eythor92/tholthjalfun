@@ -279,7 +279,7 @@ function sessionsCard(x){
   for(var i=SESSIONS.indexOf(s)-1;i>=0;i--){if(SESSIONS[i].type===s.type&&x[SESSIONS[i].k]){prev=SESSIONS[i];break}}
   html+='<div class="detail"><div class="t">Vika '+s.w+' · '+esc(s.label)+'</div>';
   html+='<div class="m">Meðalpúls <b class="num">'+(v.avg!=null?v.avg:'—')+'</b>'+(hm&&v.avg?' <span class="num">('+Math.round(v.avg/hm*100)+'% af hámarki)</span>':'')+'</div>';
-  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div><div class="m">Kaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>';
+  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div><div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>';
   if(s.type==='t1'&&v.min!=null)html+='<div class="m">Kláraði <b class="num">mín '+v.min+' · '+t1rpm(v)+' rpm</b></div>';
   if(s.type==='t2'&&total(v)!=null){MACHINES.forEach(function(m){if(v[m[0]]!=null)html+='<div class="m">'+m[1]+' <b class="num">'+v[m[0]]+'</b></div>'});html+='<div class="m">Samtals á tækjum <b class="num">'+total(v)+'</b></div>'}
   var ts=tsess(pk);
@@ -399,7 +399,7 @@ function coachView(){
  var fields;
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['kcal','Polar kaloríur'])}
  else if(s.type==='t2'){fields=[['avg','Meðalpúls'],['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])});fields.push(['kcal','Polar kaloríur'])}
- else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Kaloríur']];
+ else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.<small>úr Polar</small>']];
  fields=fields.concat(zf);
  var html='';
  if(!state.athletes.length)html+='<div class="banner"><b>Byrjaðu á að bæta við iðkendum</b> neðar á síðunni. Hver iðkandi fær sinn eigin kóða sem þú sendir honum.</div>';
@@ -432,9 +432,9 @@ function coachView(){
 function athleteRef(id){return db.collection('athletes').doc(id)}
 function minFor(rpm){return rpm<=60?Math.floor((rpm-50)/2)+1:rpm-54}
 function selfFields(s){
- if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['kcal','Kaloríur (valfrjálst)']];
- var f=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Kaloríur']];
- if(s.type==='t2')MACHINES.forEach(function(m){f.push([m[0],m[1]+' · kaloríur á 10 mín'])});
+ if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
+ var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
+ if(s.type==='t2')MACHINES.forEach(function(m){f.push([m[0],m[1]+' · kaloríur á tækinu','Talan sem tækið sýnir eftir 10 mínútur.'])});
  return f;
 }
 function selfView(){
@@ -449,7 +449,7 @@ function selfView(){
  if(s.type==='t1')html+='<p class="hint">Próf 1: 1. mín 50 rpm, svo +2 á mínútu upp í 60 rpm, eftir það +1 á mínútu. Skráðu síðasta RPM sem þú kláraðir heila mínútu á.</p>';
  if(s.type==='t2')html+='<p class="hint">Skráðu þau tæki sem þú hafðir aðgang að. Hin má skilja eftir auð.</p>';
  html+='<div class="self-grid">';
- selfFields(s).forEach(function(f){var v=cur[f[0]]!=null?cur[f[0]]:'';html+='<label class="f" for="me-'+f[0]+'">'+f[1]+'<input id="me-'+f[0]+'" inputmode="numeric" value="'+esc(v)+'"></label>'});
+ selfFields(s).forEach(function(f){var v=cur[f[0]]!=null?cur[f[0]]:'';html+='<label class="f" for="me-'+f[0]+'">'+f[1]+(f[2]?'<span class="fhint">'+f[2]+'</span>':'')+'<input id="me-'+f[0]+'" inputmode="numeric" value="'+esc(v)+'"></label>'});
  html+='</div>';
  if(s.type==='t1')html+='<p class="trend" id="me-t1">'+(cur.rpm!=null?'= '+minFor(cur.rpm)+' mínútur':'')+'</p>';
  html+='<details class="self-zones"'+(hasZones(cur)?' open':'')+'><summary>Sýna meira: tími í púlssvæðum (valfrjálst)</summary><div class="self-grid">';
