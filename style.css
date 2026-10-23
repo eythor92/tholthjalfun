@@ -206,3 +206,23 @@ table.entry.codes select{min-width:180px}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-logo{height:34px;width:auto;display:block;flex:none}
 @media (max-width:420px){.brand-logo{height:28px}.brand .eyebrow{font-size:11px}}
+.coach-login{flex-direction:column;gap:10px;align-items:stretch}
+.linkbtn{appearance:none;background:none;border:0;color:var(--muted);font:600 14px var(--body);text-decoration:underline;cursor:pointer;padding:6px}
+.pw-form{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.pw-form input{width:100%;font-size:17px;padding:10px 12px}
+.ok{color:var(--good);font-weight:600;font-size:14px;margin:12px 0 0}
+.share-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--band);color:var(--band-fg);border-radius:14px;padding:14px 18px}
+.share-bar b{display:block;font-family:var(--display);font-size:20px}
+.share-bar span{font-size:13.5px;color:var(--band-muted)}
+.share-modal{position:fixed;inset:0;z-index:30;background:rgba(5,9,13,.72);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.share-box{background:var(--surface);color:var(--ink);border-radius:16px;padding:18px;width:100%;max-width:460px;max-height:100%;overflow:auto;display:grid;gap:12px}
+.share-head{display:flex;justify-content:space-between;align-items:center}
+.share-head h3{font-family:var(--display);font-size:24px;margin:0}
+.share-x{appearance:none;border:0;background:var(--soft);color:var(--ink);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer}
+.share-opts{display:grid;gap:8px}
+.share-prev{position:relative;border-radius:12px;overflow:hidden;background:#0b1117;display:flex;justify-content:center;min-height:200px}
+.share-prev img{display:block;max-height:52vh;width:auto;max-width:100%}
+.share-prev.checker{background-color:#d9dee3;background-image:linear-gradient(45deg,#b9c1c9 25%,transparent 25%),linear-gradient(-45deg,#b9c1c9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#b9c1c9 75%),linear-gradient(-45deg,transparent 75%,#b9c1c9 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
+#share-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9fb0bf;font-weight:600}
+.share-box .btn{width:100%}
+.zone-toggle{width:100%;order:3;margin-top:2px}

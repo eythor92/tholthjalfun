@@ -522,10 +522,11 @@ function coachView(){
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['rec','Púls 1 mín<small>eftir próf</small>'],['kcal','Polar kaloríur'])}
  else if(s.type==='t2'){fields=[['avg','Meðalpúls'],['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])});fields.push(['kcal','Polar kaloríur'])}
  else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.<small>úr Polar</small>']];
- fields=fields.concat(zf);
+ var zon=!!ui.zones;try{if(ui.zones==null)zon=localStorage.getItem('tt-zones')==='1'}catch(e){}
+ if(zon)fields=fields.concat(zf);
  var html='';
  if(!state.athletes.length)html+='<div class="banner"><b>Byrjaðu á að bæta við iðkendum</b> neðar á síðunni. Hver iðkandi fær sinn eigin kóða sem þú sendir honum.</div>';
- html+='<section class="card"><div class="coach-top"><div><h3>Skrá niðurstöður</h3><p class="desc" style="margin-bottom:0">Veldu æfingu, sláðu inn tölur hvers iðkanda úr Polar og vistaðu. Skildu línu eftir auða ef einhver mætti ekki. Tími í svæðum er í sömu röð og hjá Polar (svæði 5 efst), skráður eins og Polar sýnir hann, t.d. 22:16 eða 00:22:16.'+(s.type==='t1'?' Í Prófi 1 er einn reitur fyrir hverja mínútu. Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Fjöldi útfylltra reita segir hvað hann kláraði margar mínútur og hvaða RPM, og hæsti púlsinn fer í hámarkspúls ef þú skrifar ekki annað. „Púls 1 mín“ er púlsinn 60 sekúndum eftir að iðkandinn hætti.':'')+'</p></div><div class="coach-sel"><label class="f" for="c-group">Hópur<select id="c-group"><option value="1"'+(ui.egroup==='1'?' selected':'')+'>Hópur 1 · á staðnum</option><option value="2"'+(ui.egroup==='2'?' selected':'')+'>Hópur 2 · fjarþjálfun</option><option value="all"'+(ui.egroup==='all'?' selected':'')+'>Allir</option></select></label><label class="f" for="c-session">Æfing<select id="c-session">';
+ html+='<section class="card"><div class="coach-top"><div><h3>Skrá niðurstöður</h3><p class="desc" style="margin-bottom:0">Veldu æfingu, sláðu inn tölur hvers iðkanda úr Polar og vistaðu. Skildu línu eftir auða ef einhver mætti ekki.'+(zon?' Tími í svæðum er í sömu röð og hjá Polar (svæði 5 efst), skráður eins og Polar sýnir hann, t.d. 22:16.':'')+(s.type==='t1'?' Í Prófi 1 er einn reitur fyrir hverja mínútu. Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Fjöldi útfylltra reita segir hvað hann kláraði margar mínútur og hvaða RPM, og hæsti púlsinn fer í hámarkspúls ef þú skrifar ekki annað. „Púls 1 mín“ er púlsinn 60 sekúndum eftir að iðkandinn hætti.':'')+'</p></div><div class="coach-sel"><label class="remember zone-toggle" for="c-zones"><input id="c-zones" type="checkbox"'+(zon?' checked':'')+'> Skrá tíma í púlssvæðum</label><label class="f" for="c-group">Hópur<select id="c-group"><option value="1"'+(ui.egroup==='1'?' selected':'')+'>Hópur 1 · á staðnum</option><option value="2"'+(ui.egroup==='2'?' selected':'')+'>Hópur 2 · fjarþjálfun</option><option value="all"'+(ui.egroup==='all'?' selected':'')+'>Allir</option></select></label><label class="f" for="c-session">Æfing<select id="c-session">';
  var elist=inGroup(ui.egroup);
  SESSIONS.forEach(function(q){var n=elist.filter(function(a){return real[a.id]&&real[a.id][q.k]}).length;html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(n?' ('+n+' skráðir)':'')+'</option>'});
  html+='</select></label></div></div>'+(ui.egroup==='2'?'<p class="desc" style="margin-top:12px">Iðkendur í hópi 2 skrá sjálfir. Hér geturðu leiðrétt tölurnar þeirra.</p>':'')+'<div class="tablewrap"><table class="entry'+(s.type==='t1'?' steps':'')+'"><thead><tr><th>Iðkandi</th>';
@@ -724,6 +725,7 @@ app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preve
 app.addEventListener('change',function(e){var t=e.target;
  if(t.id==='c-session'){ui.coachSession=t.value;persistUi();render()}
  else if(t.id==='c-group'){ui.egroup=t.value;render()}
+ else if(t.id==='c-zones'){ui.zones=t.checked;try{localStorage.setItem('tt-zones',t.checked?'1':'0')}catch(e){}render()}
  else if(t.id==='me-session'){ui.selfSession=t.value;render()}
  else if(t.id==='new-group'){newGroup=t.value}
  else if(t.dataset.regroup){regroups[t.dataset.regroup]=t.value}});
