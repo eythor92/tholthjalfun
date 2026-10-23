@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Netfang þjálfara (sama og í firebase-config.js).
+    function isCoach() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['eythor1992@gmail.com'];
+    }
+
+    // Hver iðkandi er eitt skjal. Kóðinn hans er nafnið á skjalinu.
+    // Iðkandi getur sótt sitt skjal ef hann veit kóðann, en ekki skoðað listann.
+    match /athletes/{code} {
+      allow get: if true;
+      allow list, create, update, delete: if isCoach();
+    }
+
+    // Titill verkefnisins.
+    match /meta/{doc} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+  }
+}

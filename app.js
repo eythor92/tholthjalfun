@@ -12,24 +12,74 @@ var SESSIONS=[
  {k:'w5t2',w:5,type:'t2',label:'Próf 2 · 3 × 10 mín kaloríur',short:'Próf 2',cls:'t'}
 ];
 var MACHINES=[['bike','BikeErg'],['row','Róðravél'],['assault','Assault-hjól']];
-var state=JSON.parse(JSON.stringify(window.TRACKER_DATA));
-var data=state.example?makeExample():(state.data||{});
+var CFG=window.FIREBASE_CONFIG||null;
+var COACH_EMAILS=(window.COACH_EMAILS||[]).map(function(e){return String(e).trim().toLowerCase()});
+var state={project:'Þolþjálfun',athletes:[]};
+var data={};
 var app=document.getElementById('app');
-var canEdit=false, saving=false, draft={}, names=null, pins=null, confirmClear=false, auth=null, loginErr='', loginWho='';
-if(!state.coachPin)state.coachPin=pinHash('coach','1234');
-var ui={view:'athlete',sel:state.athletes[0].id,filter:'all',pick:null,coachSession:'w1t1'};
+var team=null,canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
+var ui={view:'athlete',sel:null,filter:'all',pick:null,coachSession:'w1t1'};
 try{var saved=JSON.parse(sessionStorage.getItem('tt-ui')||'null');if(saved){ui.view=saved.view||ui.view;ui.coachSession=saved.coachSession||ui.coachSession;if(saved.sel)ui.sel=saved.sel;}}catch(e){}
-var h=location.hash.replace('#','');
-if(h==='coach'||byId(h))loginWho=h;
-try{var sa=JSON.parse(localStorage.getItem('tt-auth')||'null');if(sa&&validAuth(sa))setAuth(sa,false)}catch(e){}
-if(canEdit){if(h==='coach')ui.view='coach';else if(h==='team')ui.view='team';else if(byId(h)){ui.view='athlete';ui.sel=h}}
+var db=null,fauth=null;
+var CODE_RE=/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/;
+function normCode(v){v=String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');return v.length===8?v.slice(0,4)+'-'+v.slice(4):v}
+function newCode(){var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',b=new Uint32Array(8);crypto.getRandomValues(b);var c='';for(var i=0;i<8;i++){c+=A[b[i]%A.length];if(i===3)c+='-'}return c}
+function sortAthletes(){state.athletes.sort(function(a,b){return(a.order||0)-(b.order||0)||String(a.name).localeCompare(String(b.name),'is')})}
+function linkFor(code){return location.origin+location.pathname+'#'+code}
+function fail(e){busy='';saving=false;render();toast('Ekki tókst að vista ('+((e&&e.code)||'villa')+'). Athugaðu netsambandið og reyndu aftur.')}
 
-function cyrb53(str){var h1=0xdeadbeef,h2=0x41c6ce57;for(var i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return(h2>>>0).toString(16).padStart(8,'0')+(h1>>>0).toString(16).padStart(8,'0')}
-function pinHash(who,pin){return cyrb53('thol|'+who+'|'+String(pin).trim())}
-function storedHash(who){if(who==='coach')return state.coachPin;var a=byId(who);return a&&a.pin||null}
-function validAuth(a){var sh=storedHash(a.who);return!!sh&&a.h===sh}
-function setAuth(a,remember){auth=a;canEdit=a.who==='coach';if(!canEdit){ui.view='athlete';ui.sel=a.who}else if(ui.view!=='coach'&&ui.view!=='team'&&ui.view!=='athlete')ui.view='athlete';if(remember){try{localStorage.setItem('tt-auth',JSON.stringify(a))}catch(e){}}}
-function logout(){auth=null;canEdit=false;loginErr='';try{localStorage.removeItem('tt-auth')}catch(e){}render();window.scrollTo(0,0)}
+function boot(){
+ var placeholder=!CFG||!CFG.apiKey||/SETTU|YOUR/i.test(CFG.apiKey);
+ if(placeholder||!window.firebase){setupErr=!window.firebase?'Firebase-forritasafnið hlóðst ekki. Athugaðu netsambandið.':'Það á eftir að setja Firebase-stillingarnar inn í skrána <code>firebase-config.js</code>. Sjá leiðbeiningar í README.md.';booting=false;render();return}
+ firebase.initializeApp(CFG);db=firebase.firestore();fauth=firebase.auth();
+ db.collection('meta').doc('project').get().then(function(d){if(d.exists&&d.data().title){state.project=d.data().title;render()}}).catch(function(){});
+ fauth.onAuthStateChanged(function(user){if(user)loadCoach(user);else if(!auth||auth.who==='coach'){auth=null;canEdit=false;tryStoredCode()}});
+}
+function isCoachEmail(u){return!!(u&&u.email&&COACH_EMAILS.indexOf(u.email.toLowerCase())>=0)}
+function loadCoach(user){
+ if(!isCoachEmail(user)){loginErr='Google-aðgangurinn '+user.email+' er ekki skráður sem þjálfari.';fauth.signOut();booting=false;render();return}
+ busy='load';render();
+ db.collection('athletes').get().then(function(snap){
+  state.athletes=[];data={};
+  snap.forEach(function(d){var v=d.data();state.athletes.push({id:d.id,name:v.name||'Iðkandi',order:v.order||0});data[d.id]=v.data||{}});
+  sortAthletes();
+  auth={who:'coach',email:user.email};canEdit=true;booting=false;busy='';loginErr='';pushTeam();
+  if(!ui.sel||!byId(ui.sel))ui.sel=state.athletes.length?state.athletes[0].id:null;
+  if(!state.athletes.length)ui.view='coach';
+  if(location.hash==='#team')ui.view='team';
+  render();
+ }).catch(function(e){booting=false;busy='';auth=null;canEdit=false;loginErr='Gat ekki sótt gögnin ('+(e.code||e.message)+'). Athugaðu að netfangið þitt sé eins í firebase-config.js og í reglunum í Firebase.';fauth.signOut();render()});
+}
+function storedCode(){try{return localStorage.getItem('tt-code')}catch(e){return null}}
+function hashCode(){var c=normCode(decodeURIComponent(location.hash.replace('#','')));return CODE_RE.test(c)?c:null}
+function tryStoredCode(){var c=hashCode()||storedCode();if(c)openCode(c,true);else{booting=false;render()}}
+function openCode(code,remember){
+ code=normCode(code);
+ if(!CODE_RE.test(code)){loginErr='Kóðinn er 8 stafir, t.d. K7PQ-4MXA.';booting=false;render();return}
+ busy='code';render();
+ db.collection('athletes').doc(code).get().then(function(d){busy='';booting=false;
+  if(!d.exists){loginErr='Þessi kóði fannst ekki. Athugaðu hann eða talaðu við þjálfarann.';try{if(storedCode()===code)localStorage.removeItem('tt-code')}catch(e){}render();return}
+  var v=d.data();state.athletes=[{id:code,name:v.name||'Iðkandi'}];data={};data[code]=v.data||{};
+  auth={who:code};canEdit=false;ui.view='athlete';ui.sel=code;loginErr='';team=null;
+  db.collection('meta').doc('team').get().then(function(t){if(t.exists){team=t.data();if(auth&&!canEdit)render()}}).catch(function(){});
+  if(remember){try{localStorage.setItem('tt-code',code)}catch(e){}}
+  render();
+ }).catch(function(){busy='';booting=false;loginErr='Ekki tókst að tengjast. Athugaðu netsambandið og reyndu aftur.';render()});
+}
+function coachLogin(){
+ var pr=new firebase.auth.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
+ fauth.signInWithPopup(pr).catch(function(e){
+  if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request')return;
+  if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){fauth.signInWithRedirect(pr);return}
+  loginErr=e.code==='auth/unauthorized-domain'?'Þetta vefsvæði er ekki leyft í Firebase. Bættu því við undir Authentication → Settings → Authorized domains.':'Innskráning tókst ekki ('+e.code+').';render()});
+}
+function logout(){
+ if(canEdit&&fauth)fauth.signOut();
+ try{localStorage.removeItem('tt-code')}catch(e){}
+ auth=null;canEdit=false;state.athletes=[];data={};draft={};loginErr='';team=null;
+ if(hashCode())history.replaceState(null,'',location.pathname);
+ render();window.scrollTo(0,0);
+}
 
 function byId(id){for(var i=0;i<state.athletes.length;i++)if(state.athletes[i].id===id)return state.athletes[i];return null}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -85,8 +135,9 @@ function render(){
  var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="eyebrow">Þjálfunarlota · 5 vikur</div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs" role="tablist">';
  tabs.forEach(function(t){html+='<button class="tab" role="tab" data-act="view" data-v="'+t[0]+'" aria-selected="'+(ui.view===t[0])+'">'+t[1]+'</button>'});
  html+='</nav></div></header><main class="wrap">';
- if(!auth){app.innerHTML=html+loginView()+'</main>';var pi=document.getElementById('login-pin');if(pi&&loginWho)pi.focus();return}
- if(state.example&&canEdit&&ui.view!=='coach')html+='<div class="banner"><b>Dæmatölur.</b> Þessar tölur eru tilbúnar svo þú sjáir hvernig síðan virkar. Þær hverfa þegar niðurstöður eru vistaðar í fyrsta sinn.</div>';
+ if(setupErr){app.innerHTML=html+'<section class="card login"><h3>Vantar uppsetningu</h3><p class="desc">'+setupErr+'</p></section></main>';return}
+ if(booting||busy==='load'){app.innerHTML=html+'<div class="loading">Hleð…</div></main>';return}
+ if(!auth){app.innerHTML=html+loginView()+'</main>';return}
  if(ui.view==='athlete')html+=athleteView();
  else if(ui.view==='team')html+=teamView();
  else html+=coachView();
@@ -96,6 +147,7 @@ function render(){
 }
 
 function athleteView(){
+ if(!state.athletes.length)return'<section class="card"><h3>Engir iðkendur enn</h3><p class="desc">Bættu iðkendum við undir Skrá niðurstöður.</p></section>';
  var a=byId(ui.sel)||state.athletes[0],x=data[a.id]||{};
  var html='';
  if(canEdit){html+='<div class="chips" role="group" aria-label="Veldu iðkanda">';
@@ -107,8 +159,27 @@ function athleteView(){
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1rpm(x.w1t1)+' rpm'+(t1b!=null?' → mín '+t1b+' · '+t1rpm(x.w5t1)+' rpm':' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Æfingar kláraðar',countDone(x)+'<span style="font-size:.55em;color:var(--muted)"> / 10</span>','Próf og æfingar');
- html+='</div></section><div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x);
+ html+='</div></section>'+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x);
  return html;
+}
+function vsCard(x){
+ if(!team)return'';
+ var rows=[],t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
+ function add(label,you,grp,fmt,unit){if(grp==null&&you==null)return;rows.push({l:label,y:you,g:grp,f:fmt||function(v){return(Math.round(v*10)/10).toLocaleString('is-IS')},u:unit||''})}
+ if(team.d1!=null||(t1a!=null&&t1b!=null))add('Bæting í Prófi 1',t1a!=null&&t1b!=null?t1b-t1a:null,team.d1,function(v){return sign(v,function(q){return(Math.round(q*10)/10).toLocaleString('is-IS')})},' mín');
+ else add('Próf 1 · mínútur',t1a,tsess('w1t1')&&tsess('w1t1').min,null,' mín');
+ if(team.d2!=null||(c1!=null&&c5!=null))add('Bæting í Prófi 2',c1!=null&&c5!=null?c5-c1:null,team.d2,function(v){return sign(Math.round(v))},' kal');
+ else add('Próf 2 · samtals kaloríur',c1,tsess('w1t2')&&tsess('w1t2').total,function(v){return Math.round(v)},' kal');
+ add('Þriðjudagar · tími í svæði 4–5',zshare(x,'tue',['z4','z5']),team.tueHi,function(v){return Math.round(v)},'%');
+ add('Fimmtudagar · tími í svæði 2–3',zshare(x,'thu',['z2','z3']),team.thuMid,function(v){return Math.round(v)},'%');
+ add('Æfingar kláraðar',countDone(x),team.done,null,' / 10');
+ rows=rows.filter(function(r){return r.g!=null});
+ if(!rows.length)return'';
+ var html='<section class="card vs"><h3>Þú og hópurinn</h3><p class="desc">Þínar tölur bornar saman við meðaltal hópsins ('+team.n+' iðkendur). Þú sérð ekki tölur annarra einstaklinga.</p><div class="vs-legend"><span><i class="sw" style="background:var(--pulse)"></i>Þú</span><span><i class="sw" style="background:var(--w1)"></i>Meðaltal hópsins</span></div><div class="vs-rows">';
+ rows.forEach(function(r){var mx=Math.max(Math.abs(r.y||0),Math.abs(r.g||0))||1;
+  function bar(v,c){return'<div class="vs-bar"><i class="'+c+'" style="width:'+(v!=null?Math.max(4,Math.max(0,v)/mx*100):0)+'%"></i><span class="num">'+(v!=null?r.f(v)+r.u:'—')+'</span></div>'}
+  html+='<div class="vs-row"><div class="vs-l">'+r.l+'</div>'+bar(r.y,'you')+bar(r.g,'grp')+'</div>'});
+ return html+'</div></section>';
 }
 function stat(k,v,s){return'<div class="stat"><div class="k">'+k+'</div><div class="v num">'+v+'</div><div class="s num">'+s+'</div></div>'}
 
@@ -192,7 +263,7 @@ function filtered(){return SESSIONS.filter(function(s){return ui.filter==='all'|
 function sessionsCard(x){
  var html='<section class="card"><div class="sess-head"><div><h3>Allar æfingar</h3><p class="desc" style="margin-bottom:0">Meðalpúls og hámarkspúls, með Polar-kaloríum fyrir neðan. Smelltu á æfingu til að sjá nánar.</p></div><div class="chips" role="group" aria-label="Sía æfingar">';
  [['all','Allt'],['tue','Þriðjudagar'],['thu','Fimmtudagar'],['test','Próf']].forEach(function(f){html+='<button class="chip sm" data-act="filter" data-f="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+f[1]+'</button>'});
- html+='</div></div><div class="legend"><span><i class="sw" style="background:var(--test)"></i>Próf</span><span><i class="sw" style="background:var(--pulse)"></i>Þriðjudagur</span><span><i class="sw" style="background:var(--long)"></i>Fimmtudagur</span><span><i class="sw" style="background:var(--muted)"></i>Meðalpúls (neðri tala)</span><span><i class="sw" style="border:2px solid var(--muted)"></i>Hámarkspúls (efri tala)</span></div><div class="chartbox" id="chart"></div>';
+ html+='</div></div><div class="legend"><span><i class="sw" style="background:var(--test)"></i>Próf</span><span><i class="sw" style="background:var(--pulse)"></i>Þriðjudagur</span><span><i class="sw" style="background:var(--long)"></i>Fimmtudagur</span><span><i class="sw" style="background:var(--muted)"></i>Meðalpúls (neðri tala)</span><span><i class="sw" style="border:2px solid var(--muted)"></i>Hámarkspúls (efri tala)</span>'+(team?'<span><i class="dash"></i>Meðalpúls hópsins</span>':'')+'</div><div class="chartbox" id="chart"></div>';
  var list=filtered().filter(function(s){return x[s.k]});
  if(ui.filter==='tue'||ui.filter==='thu'){
   if(list.length>=2){var f=x[list[0].k],l=x[list[list.length-1].k],d=l.avg-f.avg;
@@ -207,7 +278,9 @@ function sessionsCard(x){
   html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div><div class="m">Kaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>';
   if(s.type==='t1'&&v.min!=null)html+='<div class="m">Kláraði <b class="num">mín '+v.min+' · '+t1rpm(v)+' rpm</b></div>';
   if(s.type==='t2'&&total(v)!=null){MACHINES.forEach(function(m){if(v[m[0]]!=null)html+='<div class="m">'+m[1]+' <b class="num">'+v[m[0]]+'</b></div>'});html+='<div class="m">Samtals á tækjum <b class="num">'+total(v)+'</b></div>'}
-  if(hasZones(v)){html+='<div class="zdetail">'+zoneBar(v,true)+'<div class="zlegend">'+ZK.map(function(k,i){return'<span><i class="sw zc'+(i+1)+'"></i>Svæði '+(i+1)+' <b class="num">'+Math.round((v[k]||0)/60)+' mín</b></span>'}).join('')+'</div></div>'}
+  var ts=tsess(pk);
+  if(ts&&(ts.avg!=null||ts.max!=null))html+='<div class="m team-line">Meðaltal hópsins: meðalpúls <b class="num">'+(ts.avg!=null?Math.round(ts.avg):'—')+'</b> · hámarkspúls <b class="num">'+(ts.max!=null?Math.round(ts.max):'—')+'</b>'+(ts.kcal!=null?' · kaloríur <b class="num">'+Math.round(ts.kcal)+'</b>':'')+'</div>';
+  if(hasZones(v)){html+='<div class="zdetail"><div class="zlab">Þú</div>'+zoneBar(v,true)+(ts&&ts.zones?'<div class="zlab">Meðaltal hópsins</div>'+zoneBar(ts.zones):'')+'<div class="zlegend">'+ZK.map(function(k,i){return'<span><i class="sw zc'+(i+1)+'"></i>Svæði '+(i+1)+' <b class="num">'+Math.round((v[k]||0)/60)+' mín</b></span>'}).join('')+'</div></div>'}
   if(prev){var pv=x[prev.k];if(pv.avg!=null&&v.avg!=null)html+='<div class="m">Miðað við viku '+prev.w+': meðalpúls <b class="num">'+sign(v.avg-pv.avg)+'</b></div>'}
   html+='</div>';
  }
@@ -225,12 +298,33 @@ function zonesOverview(x){
  if(h45!=null||l23!=null)html+='<div class="trend">'+(h45!=null?'Á þriðjudögum varstu <b class="num">'+h45+'%</b> af tímanum í svæði 4–5. ':'')+(l23!=null?'Á fimmtudögum varstu <b class="num">'+l23+'%</b> af tímanum í svæði 2–3.':'')+'</div>';
  return html+'</div>';
 }
+var MINN=3;
+function zshare(x,type,keys){var t=0,z=0;SESSIONS.forEach(function(s){var v=x[s.k];if(s.type===type&&hasZones(v)){t+=zoneSecs(v);keys.forEach(function(k){z+=v[k]||0})}});return t?Math.round(z/t*100):null}
+function mean(arr,min){arr=arr.filter(function(v){return v!=null&&!isNaN(v)});if(arr.length<(min||MINN))return null;return Math.round(arr.reduce(function(a,b){return a+b},0)/arr.length*10)/10}
+function computeTeam(){
+ var xs=state.athletes.map(function(a){return data[a.id]||{}});
+ var T={n:xs.length,sessions:{}};
+ SESSIONS.forEach(function(s){var recs=xs.map(function(x){return x[s.k]}).filter(Boolean),o={n:recs.length};
+  ['avg','max','kcal'].forEach(function(k){o[k]=mean(recs.map(function(r){return r[k]}))});
+  var zr=recs.filter(hasZones);if(zr.length>=MINN){o.zones={};ZK.forEach(function(k){o.zones[k]=Math.round(mean(zr.map(function(r){return r[k]||0}),1))})}
+  if(s.type==='t1')o.min=mean(recs.map(function(r){return r.min}));
+  if(s.type==='t2'){MACHINES.forEach(function(m){o[m[0]]=mean(recs.map(function(r){return r[m[0]]}))});o.total=mean(recs.map(total))}
+  T.sessions[s.k]=o});
+ T.d1=mean(xs.map(function(x){return x.w1t1&&x.w5t1&&x.w1t1.min!=null&&x.w5t1.min!=null?x.w5t1.min-x.w1t1.min:null}));
+ T.d2=mean(xs.map(function(x){var a=total(x.w1t2),b=total(x.w5t2);return a!=null&&b!=null?b-a:null}));
+ T.tueHi=mean(xs.map(function(x){return zshare(x,'tue',['z4','z5'])}));
+ T.thuMid=mean(xs.map(function(x){return zshare(x,'thu',['z2','z3'])}));
+ T.done=mean(xs.map(countDone));
+ return T;
+}
+function pushTeam(){if(!canEdit||!db)return;team=computeTeam();db.collection('meta').doc('team').set(team).catch(function(){})}
+function tsess(k){return team&&team.sessions&&team.sessions[k]||null}
 function color(s){return s.cls==='h'?'var(--pulse)':s.cls==='l'?'var(--long)':'var(--test)'}
 function drawChart(){
  var box=document.getElementById('chart');if(!box)return;
  var x=data[ui.sel]||{},list=filtered();
  var W=Math.max(320,Math.round(box.clientWidth||700)),H=300,pl=34,pr=8,top=18,hb=168,kt=226,kb=270;
- var vals=[];list.forEach(function(s){var v=x[s.k];if(v){if(v.avg!=null)vals.push(v.avg);if(v.max!=null)vals.push(v.max)}});
+ var vals=[];list.forEach(function(s){var v=x[s.k];if(v){if(v.avg!=null)vals.push(v.avg);if(v.max!=null)vals.push(v.max);var ts=tsess(s.k);if(ts&&ts.avg!=null)vals.push(ts.avg)}});
  if(!vals.length){box.innerHTML='<div class="empty">Engar æfingar skráðar enn.</div>';return}
  var lo=Math.floor((Math.min.apply(null,vals)-8)/10)*10,hi=Math.ceil((Math.max.apply(null,vals)+6)/10)*10;
  var y=function(v){return hb-(v-lo)/(hi-lo)*(hb-top)};
@@ -244,6 +338,7 @@ function drawChart(){
  var fs=step<34?10:12;
  list.forEach(function(s,i){
   var v=x[s.k],c=color(s),X=cx(i);
+  var tsv=tsess(s.k);if(v&&tsv&&tsv.avg!=null){var tw=Math.min(step*.7,34);svg+='<line x1="'+(X-tw/2)+'" x2="'+(X+tw/2)+'" y1="'+y(tsv.avg)+'" y2="'+y(tsv.avg)+'" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/>'}
   if(v){
    if(v.avg!=null&&v.max!=null)svg+='<line x1="'+X+'" x2="'+X+'" y1="'+y(v.avg)+'" y2="'+y(v.max)+'" stroke="'+c+'" stroke-width="3" stroke-linecap="round"/>';
    if(v.max!=null)svg+='<circle cx="'+X+'" cy="'+y(v.max)+'" r="5" fill="var(--surface)" stroke="'+c+'" stroke-width="2.5"/><text x="'+X+'" y="'+(y(v.max)-9)+'" text-anchor="middle" font-size="'+fs+'" font-weight="600" fill="var(--ink)">'+v.max+'</text>';
@@ -282,31 +377,23 @@ function board(title,desc,rows,k,fmt,extra){
 }
 
 function loginView(){
- var html='<section class="card login"><h3>Opnaðu þínar niðurstöður</h3><p class="desc">Veldu nafnið þitt og sláðu inn PIN-númerið sem þjálfarinn gaf þér.</p><form id="login-form" class="login-form" autocomplete="off"><label class="f" for="login-who">Hver ert þú?<select id="login-who"><option value="">Veldu nafnið þitt</option>';
- state.athletes.forEach(function(a){html+='<option value="'+a.id+'"'+(loginWho===a.id?' selected':'')+'>'+esc(a.name)+'</option>'});
- html+='<option value="coach"'+(loginWho==='coach'?' selected':'')+'>Þjálfari</option></select></label><label class="f" for="login-pin">PIN-númer<input id="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••"></label><label class="remember" for="login-remember"><input id="login-remember" type="checkbox" checked> Muna eftir mér á þessu tæki</label><button class="btn" type="submit">Opna</button></form>'+(loginErr?'<p class="err" role="alert">'+esc(loginErr)+'</p>':'')+'</section>';
+ var html='<section class="card login"><h3>Opnaðu þínar niðurstöður</h3><p class="desc">Sláðu inn kóðann sem þjálfarinn gaf þér.</p><form id="login-form" class="login-form" autocomplete="off"><label class="f" for="login-code">Kóðinn þinn<input id="login-code" class="code-in" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX"></label><label class="remember" for="login-remember"><input id="login-remember" type="checkbox" checked> Muna eftir mér á þessu tæki</label><button class="btn" type="submit"'+(busy?' disabled':'')+'>'+(busy==='code'?'Opna…':'Opna')+'</button></form>'+(loginErr?'<p class="err" role="alert">'+esc(loginErr)+'</p>':'')+'</section>';
+ html+='<div class="coach-login"><button class="btn ghost" data-act="coach-login">Þjálfari? Skráðu þig inn með Google</button></div>';
  return html;
 }
-function tryLogin(){
- var who=document.getElementById('login-who').value,pin=document.getElementById('login-pin').value.trim(),rem=document.getElementById('login-remember').checked;loginWho=who;
- if(!who){loginErr='Veldu nafnið þitt fyrst.';render();return}
- var sh=storedHash(who);
- if(!sh){loginErr='Ekkert PIN-númer hefur verið sett fyrir þig enn. Talaðu við þjálfarann.';render();return}
- if(pinHash(who,pin)!==sh){loginErr='Rangt PIN-númer. Talaðu við þjálfarann ef þú hefur gleymt því.';render();return}
- loginErr='';setAuth({who:who,h:sh},rem);render();window.scrollTo(0,0);
-}
+function tryLogin(){var c=document.getElementById('login-code').value,rem=document.getElementById('login-remember').checked;loginErr='';openCode(c,rem)}
 
 function coachView(){
  var s=SESSIONS.filter(function(q){return q.k===ui.coachSession})[0]||SESSIONS[0];
  var zf=[['z5','Svæði 5<small>mín:sek</small>'],['z4','Svæði 4<small>mín:sek</small>'],['z3','Svæði 3<small>mín:sek</small>'],['z2','Svæði 2<small>mín:sek</small>'],['z1','Svæði 1<small>mín:sek</small>']];
- var real=state.example?{}:(state.data||{});
+ var real=data;
  var fields;
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['kcal','Polar kaloríur'])}
  else if(s.type==='t2'){fields=[['avg','Meðalpúls'],['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])});fields.push(['kcal','Polar kaloríur'])}
  else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Kaloríur']];
  fields=fields.concat(zf);
  var html='';
- if(state.example)html+='<div class="banner"><b>Síðan sýnir dæmatölur núna.</b> Þær hverfa þegar þú vistar í fyrsta sinn. Þegar þú vistar sækist ný data.js skrá. Iðkendur sjá tölurnar ekki fyrr en sú skrá er komin á GitHub.</div>';
+ if(!state.athletes.length)html+='<div class="banner"><b>Byrjaðu á að bæta við iðkendum</b> neðar á síðunni. Hver iðkandi fær sinn eigin kóða sem þú sendir honum.</div>';
  html+='<section class="card"><div class="coach-top"><div><h3>Skrá niðurstöður</h3><p class="desc" style="margin-bottom:0">Veldu æfingu, sláðu inn tölur hvers iðkanda úr Polar og vistaðu. Skildu línu eftir auða ef einhver mætti ekki. Tími í svæðum er í sömu röð og hjá Polar (svæði 5 efst), skráður eins og Polar sýnir hann, t.d. 22:16 eða 00:22:16.'+(s.type==='t1'?' Í Prófi 1 er einn reitur fyrir hverja mínútu. Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Fjöldi útfylltra reita segir hvað hann kláraði margar mínútur og hvaða RPM, og hæsti púlsinn fer í hámarkspúls ef þú skrifar ekki annað.':'')+'</p></div><label class="f" for="c-session">Æfing<select id="c-session">';
  SESSIONS.forEach(function(q){var n=state.athletes.filter(function(a){return real[a.id]&&real[a.id][q.k]}).length;html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(n?' ('+n+' skráðir)':'')+'</option>'});
  html+='</select></label></div><div class="tablewrap"><table class="entry'+(s.type==='t1'?' steps':'')+'"><thead><tr><th>Iðkandi</th>';
@@ -319,52 +406,90 @@ function coachView(){
    html+='<td><input id="in-'+s.k+'-'+a.id+'-'+f[0]+'" data-s="'+s.k+'" data-a="'+a.id+'" data-f="'+f[0]+'" inputmode="'+(/^z/.test(f[0])?'text':'numeric')+'"'+(sm?' class="step-in" maxlength="3"':/^z/.test(f[0])?' class="zone-in"':'')+' value="'+esc(v)+'" aria-label="'+esc(a.name)+' '+f[1].replace(/<[^>]+>/g,' ')+'"></td>'});
   html+='</tr>';
  });
- html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save"'+(saving?' disabled':'')+'>'+(saving?'Vista…':'Vista æfingu')+'</button><span class="status">Sækir data.js með öllum æfingum sem hafa verið vistaðar.</span></div></section>';
- html+='<section class="card"><h3>Nöfn, PIN-númer og titill</h3><p class="desc">Breyttu nöfnum iðkenda og settu PIN-númer (4–8 tölustafir). Skildu PIN-reitinn eftir auðan til að halda núverandi númeri. PIN-númer eru falin eftir vistun, svo skrifaðu þau niður áður en þú sendir þau út.</p><label class="f" for="n-project">Titill verkefnis<input id="n-project" value="'+esc(names&&names.project!=null?names.project:state.project)+'"></label><div class="names">';
- state.athletes.forEach(function(a){var v=names&&names[a.id]!=null?names[a.id]:a.name,pv=pins&&pins[a.id]||'';html+='<div class="nameblock"><label for="n-'+a.id+'">'+a.id.replace('a','Iðkandi ')+'<input id="n-'+a.id+'" data-name="'+a.id+'" value="'+esc(v)+'"></label><label for="p-'+a.id+'">PIN · '+(a.pin?'<span class="up">skráð</span>':'<span class="down">ekki skráð</span>')+'<input id="p-'+a.id+'" data-pin="'+a.id+'" inputmode="numeric" maxlength="8" placeholder="Nýtt PIN" value="'+esc(pv)+'"></label></div>'});
- html+='<div class="nameblock"><label for="p-coach">PIN þjálfara (þitt)<input id="p-coach" data-pin="coach" inputmode="numeric" maxlength="8" placeholder="Nýtt PIN þjálfara" value="'+esc(pins&&pins.coach||'')+'"></label></div>';
- html+='</div><div class="actions"><button class="btn" data-act="save"'+(saving?' disabled':'')+'>'+(saving?'Vista…':'Vista nöfn')+'</button></div></section>';
- html+='<section class="card"><h3>Hlekkir fyrir hvern iðkanda</h3><p class="desc">Bættu merkinu aftan við hlekkinn á síðuna svo nafn iðkandans sé valið strax. Dæmi: …github.io/thol-tracker/<code>#a3</code></p><div class="links">';
- state.athletes.forEach(function(a){html+='<span>'+esc(a.name)+' <code>#'+a.id+'</code></span>'});
- html+='</div><p class="desc" style="margin-top:12px">Merkið velur nafnið á PIN-skjánum. Iðkendur sjá aðeins sína eigin síðu. Notaðu <code>#coach</code> fyrir þig.</p></section>';
- if(!state.example){html+='<section class="card"><h3>Byrja upp á nýtt</h3><p class="desc">Eyðir öllum vistuðum niðurstöðum. Nöfn og PIN-númer haldast.</p><button class="btn ghost" data-act="clear">'+(confirmClear?'Ýttu aftur til að eyða öllum niðurstöðum':'Eyða öllum niðurstöðum')+'</button></section>'}
+ html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save"'+(saving?' disabled':'')+'>'+(saving?'Vista…':'Vista æfingu')+'</button><span class="status">Vistast beint. Iðkendur sjá tölurnar strax.</span></div></section>';
+ html+='<section class="card"><h3>Iðkendur og kóðar</h3><p class="desc">Sendu hverjum iðkanda kóðann sinn eða hlekkinn. Kóðinn opnar aðeins hans eigin síðu. Ef kóði fer á flakk býrðu til nýjan og sá gamli hættir að virka.</p>';
+ if(state.athletes.length){
+  html+='<div class="tablewrap"><table class="entry codes"><thead><tr><th>Nafn</th><th>Kóði</th><th></th></tr></thead><tbody>';
+  state.athletes.forEach(function(a){var nv=renames[a.id]!=null?renames[a.id]:a.name;
+   html+='<tr><td><input id="rn-'+a.id+'" data-rename="'+a.id+'" value="'+esc(nv)+'" aria-label="Nafn"></td><td class="code num">'+a.id+'</td><td class="row-actions"><button class="btn ghost sm" data-act="copy" data-id="'+a.id+'">'+(copied===a.id?'Afritað ✓':'Afrita hlekk')+'</button><button class="btn ghost sm" data-act="regen" data-id="'+a.id+'">Nýr kóði</button><button class="btn ghost sm danger" data-act="remove" data-id="'+a.id+'">'+(confirmDel===a.id?'Ýttu aftur til að eyða':'Fjarlægja')+'</button></td></tr>'});
+  html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save-names"'+(busy?' disabled':'')+'>Vista nöfn</button></div>';
+ }
+ html+='<div class="add-athletes"><label class="f" for="new-names">Bæta við iðkendum<textarea id="new-names" rows="4" placeholder="Eitt nafn í hverja línu">'+esc(newNames)+'</textarea></label><div class="actions" style="margin-top:8px"><button class="btn" data-act="add-athletes"'+(busy?' disabled':'')+'>Bæta við</button></div></div></section>';
+ html+='<section class="card"><h3>Titill og afrit</h3><p class="desc">Titillinn birtist efst á síðunni hjá öllum.</p><label class="f" for="n-project">Titill verkefnis<input id="n-project" value="'+esc(renames.__title!=null?renames.__title:state.project)+'"></label><div class="actions"><button class="btn" data-act="save-title"'+(busy?' disabled':'')+'>Vista titil</button><button class="btn ghost" data-act="backup">Sækja afrit (JSON)</button></div><p class="desc" style="margin-top:10px">Afritið er skrá með öllum gögnum. Gott að sækja það í lok hverrar viku.</p></section>';
  return html;
 }
 
-function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
-function save(wipe){
- var nd=wipe||state.example?{}:JSON.parse(JSON.stringify(state.data||{})),bad=null;
- if(!wipe)Object.keys(draft).forEach(function(sk){Object.keys(draft[sk]).forEach(function(aid){
-  var rec=Object.assign({},(nd[aid]&&nd[aid][sk])||{}),f=draft[sk][aid];
+function athleteRef(id){return db.collection('athletes').doc(id)}
+function addAthletes(){
+ var list=newNames.split(/\n+/).map(function(n){return n.trim()}).filter(Boolean);
+ if(!list.length){toast('Skrifaðu nöfn, eitt í hverja línu.');return}
+ var batch=db.batch(),base=state.athletes.reduce(function(m,a){return Math.max(m,a.order||0)},0),added=[];
+ list.forEach(function(n,i){var c=newCode();while(byId(c)||added.some(function(x){return x.id===c}))c=newCode();var o=base+i+1;batch.set(athleteRef(c),{name:n,order:o,data:{}});added.push({id:c,name:n,order:o})});
+ busy='save';render();
+ batch.commit().then(function(){added.forEach(function(a){state.athletes.push(a);data[a.id]={}});pushTeam();newNames='';busy='';if(!ui.sel)ui.sel=added[0].id;render();toast(added.length===1?'Iðkanda bætt við.':added.length+' iðkendum bætt við.')}).catch(fail);
+}
+function saveNames(){
+ var batch=db.batch(),n=0;
+ state.athletes.forEach(function(a){var v=renames[a.id];if(v!=null&&v.trim()&&v.trim()!==a.name){batch.update(athleteRef(a.id),{name:v.trim()});n++}});
+ if(!n){toast('Engar breytingar á nöfnum.');return}
+ busy='save';render();
+ batch.commit().then(function(){state.athletes.forEach(function(a){var v=renames[a.id];if(v!=null&&v.trim())a.name=v.trim();delete renames[a.id]});busy='';render();toast('Nöfn vistuð.')}).catch(fail);
+}
+function saveTitle(){
+ var t=(renames.__title||'').trim();if(!t){toast('Skrifaðu titil.');return}
+ busy='save';render();
+ db.collection('meta').doc('project').set({title:t},{merge:true}).then(function(){state.project=t;delete renames.__title;busy='';render();toast('Titill vistaður.')}).catch(fail);
+}
+function regenCode(id){
+ var a=byId(id);if(!a)return;var c=newCode();while(byId(c))c=newCode();
+ var batch=db.batch();batch.set(athleteRef(c),{name:a.name,order:a.order||0,data:data[id]||{}});batch.delete(athleteRef(id));
+ busy='save';render();
+ batch.commit().then(function(){data[c]=data[id]||{};delete data[id];a.id=c;if(ui.sel===id)ui.sel=c;Object.keys(draft).forEach(function(sk){if(draft[sk][id]){draft[sk][c]=draft[sk][id];delete draft[sk][id]}});busy='';render();toast('Nýr kóði fyrir '+a.name+': '+c+'. Gamli kóðinn virkar ekki lengur.')}).catch(fail);
+}
+function removeAthlete(id){
+ if(confirmDel!==id){confirmDel=id;render();return}
+ confirmDel=null;var a=byId(id);busy='save';render();
+ athleteRef(id).delete().then(function(){state.athletes=state.athletes.filter(function(x){return x.id!==id});delete data[id];pushTeam();if(ui.sel===id)ui.sel=state.athletes.length?state.athletes[0].id:null;busy='';render();toast((a?a.name:'Iðkandi')+' fjarlægður.')}).catch(fail);
+}
+function copyLink(id){
+ var url=linkFor(id);
+ function done(){copied=id;render();setTimeout(function(){if(copied===id){copied=null;render()}},2000)}
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done,function(){prompt('Afritaðu hlekkinn:',url)})}else prompt('Afritaðu hlekkinn:',url);
+}
+function backup(){
+ var out={project:state.project,saved:new Date().toISOString(),athletes:state.athletes.map(function(a){return{code:a.id,name:a.name,order:a.order||0,data:data[a.id]||{}}})};
+ var blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download='tholthjalfun-afrit-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);
+}
+
+function toast(msg){document.querySelectorAll('.toast').forEach(function(x){x.remove()});var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
+function save(){
+ if(!canEdit||!db)return;
+ var bad=null,changes={};
+ Object.keys(draft).forEach(function(sk){Object.keys(draft[sk]).forEach(function(aid){
+  if(!byId(aid))return;
+  var rec=JSON.parse(JSON.stringify((data[aid]&&data[aid][sk])||{})),f=draft[sk][aid];
   var stepEdit=Object.keys(f).some(function(k){return/^s\d+$/.test(k)});
   if(stepEdit){var arr=rowStages(rec,f);if(arr.some(function(v){return v!=null&&(isNaN(v)||v<40||v>240)}))bad=byId(aid).name;
    else if(nn(arr).length){rec.stages=arr;rec.min=arr.length;rec.rpm=rpmFor(arr.length)}else{delete rec.stages;delete rec.min;delete rec.rpm}}
   Object.keys(f).forEach(function(k){if(k==='rpmManual'||k==='manual'||/^s\d+$/.test(k))return;var raw=String(f[k]).trim(),v;
    if(raw===''){delete rec[k];return}
-   if(k==='stages'){var arr=raw.split(/[^0-9]+/).filter(Boolean).map(Number);if(!arr.length||arr.some(function(n){return n<40||n>240})){bad=byId(aid).name;return}rec.stages=arr;return}
    if(/^z[1-5]$/.test(k)){v=parseTime(raw);if(v==null||isNaN(v)){bad=byId(aid).name;return}rec[k]=v;return}
    v=Math.round(Number(raw.replace(',','.')));
    if(isNaN(v)){bad=byId(aid).name;return}rec[k]=v});
   if(/t1$/.test(sk)&&rec.min!=null&&rec.rpm==null)rec.rpm=rpmFor(rec.min);
-  if(rec.stages&&rec.stages.length){if(rec.min==null)rec.min=rec.stages.length;if(rec.rpm==null)rec.rpm=rpmFor(rec.min);if(rec.max==null&&nn(rec.stages).length)rec.max=Math.max.apply(null,nn(rec.stages))}
-  nd[aid]=nd[aid]||{};
-  if(Object.keys(rec).length)nd[aid][sk]=rec;else delete nd[aid][sk];
+  if(rec.stages&&rec.stages.length&&rec.max==null&&nn(rec.stages).length)rec.max=Math.max.apply(null,nn(rec.stages));
+  changes[aid]=changes[aid]||{};changes[aid][sk]=Object.keys(rec).length?rec:null;
  })});
- if(bad){toast('Athugaðu tölurnar hjá '+bad+'. Notaðu venjulegar tölur, t.d. 63.');return}
- var badPin=null;if(pins)Object.keys(pins).forEach(function(k){var v=String(pins[k]).trim();if(v&&!/^\d{4,8}$/.test(v))badPin=k==='coach'?'þjálfara':byId(k).name});
- if(badPin){toast('PIN-númerið fyrir '+badPin+' verður að vera 4 til 8 tölustafir.');return}
- var next={project:state.project,example:false,coachPin:state.coachPin,athletes:state.athletes.map(function(a){var o={id:a.id,name:a.name};if(a.pin)o.pin=a.pin;return o}),data:nd};
- if(pins){Object.keys(pins).forEach(function(k){var v=String(pins[k]).trim();if(!v)return;if(k==='coach')next.coachPin=pinHash('coach',v);else next.athletes.forEach(function(a){if(a.id===k)a.pin=pinHash(k,v)})})}
- if(names){if(names.project&&names.project.trim())next.project=names.project.trim();next.athletes.forEach(function(a){if(names[a.id]&&names[a.id].trim())a.name=names[a.id].trim()})}
- var text='// Gögn fyrir Þolþjálfun. Vistað '+new Date().toLocaleString('is-IS')+'\n// Settu þessa skrá í verkefnismöppuna, síðan commit og push.\nwindow.TRACKER_DATA = '+JSON.stringify(next,null,1)+';\n';
- try{
-  var blob=new Blob([text],{type:'text/javascript'}),url=URL.createObjectURL(blob),link=document.createElement('a');
-  link.href=url;link.download='data.js';document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);
- }catch(e){toast('Ekki tókst að sækja skrána.');return}
- state=next;data=nd;draft={};names=null;pins=null;confirmClear=false;
- if(auth&&auth.who==='coach'&&auth.h!==state.coachPin){auth.h=state.coachPin;try{if(localStorage.getItem('tt-auth'))localStorage.setItem('tt-auth',JSON.stringify(auth))}catch(e){}}
- render();
- toast('data.js sótt. Settu hana í verkefnismöppuna, síðan commit og push.');
+ if(bad){toast('Athugaðu tölurnar hjá '+bad+'. Notaðu venjulegar tölur, t.d. 163, og tíma eins og 22:16.');return}
+ var ids=Object.keys(changes);if(!ids.length){toast('Engar breytingar til að vista.');return}
+ var batch=db.batch(),FV=firebase.firestore.FieldValue;
+ ids.forEach(function(aid){var upd={};Object.keys(changes[aid]).forEach(function(sk){upd['data.'+sk]=changes[aid][sk]===null?FV.delete():changes[aid][sk]});upd.updated=FV.serverTimestamp();batch.update(athleteRef(aid),upd)});
+ saving=true;render();
+ batch.commit().then(function(){
+  ids.forEach(function(aid){data[aid]=data[aid]||{};Object.keys(changes[aid]).forEach(function(sk){if(changes[aid][sk]===null)delete data[aid][sk];else data[aid][sk]=changes[aid][sk]})});
+  draft={};saving=false;pushTeam();render();toast('Vistað. Iðkendur sjá þetta strax.');
+ }).catch(fail);
 }
 
 app.addEventListener('click',function(e){
@@ -373,9 +498,17 @@ app.addEventListener('click',function(e){
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}
  else if(act==='pick'){ui.pick=el.getAttribute('data-k');var y=window.scrollY;render();window.scrollTo(0,y)}
- else if(act==='save')save(false);
+ else if(act==='save')save();
  else if(act==='logout')logout();
- else if(act==='clear'){if(confirmClear)save(true);else{confirmClear=true;render()}}
+ else if(act==='coach-login')coachLogin();
+ else if(act==='add-athletes')addAthletes();
+ else if(act==='save-names')saveNames();
+ else if(act==='save-title')saveTitle();
+ else if(act==='regen')regenCode(el.getAttribute('data-id'));
+ else if(act==='remove')removeAthlete(el.getAttribute('data-id'));
+ else if(act==='copy')copyLink(el.getAttribute('data-id'));
+ else if(act==='backup')backup();
+ if(act!=='remove'&&confirmDel){confirmDel=null;render()}
 });
 app.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('brow')){e.preventDefault();e.target.click()}});
 app.addEventListener('input',function(e){var t=e.target;
@@ -393,14 +526,17 @@ app.addEventListener('input',function(e){var t=e.target;
    if(t.dataset.f==='rpm')da.rpmManual=t.value.trim()!=='';
    if(t.dataset.f==='min'&&!da.rpmManual){var ri=document.getElementById('in-'+t.dataset.s+'-'+t.dataset.a+'-rpm'),mn=parseInt(t.value,10);
     var rv=mn>0?String(rpmFor(mn)):'';if(ri){ri.value=rv;ri.classList.toggle('auto',!!rv)}da.rpm=rv}}}
- else if(t.dataset.name){names=names||{};names[t.dataset.name]=t.value}
- else if(t.dataset.pin){pins=pins||{};pins[t.dataset.pin]=t.value}
- else if(t.id==='n-project'){names=names||{};names.project=t.value}
+ else if(t.dataset.rename){renames[t.dataset.rename]=t.value}
+ else if(t.id==='new-names'){newNames=t.value}
+ else if(t.id==='n-project'){renames.__title=t.value}
+ else if(t.id==='login-code'){var pos=t.value.length;var nv=normCode(t.value);if(nv.replace('-','').length===8&&nv!==t.value)t.value=nv}
 });
 app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();tryLogin()}});
 app.addEventListener('change',function(e){if(e.target.id==='c-session'){ui.coachSession=e.target.value;persistUi();render()}});
-window.addEventListener('hashchange',function(){var h=location.hash.replace('#','');if(!auth){if(h==='coach'||byId(h)){loginWho=h;render()}return}if(!canEdit)return;if(h==='team')ui.view='team';else if(h==='coach')ui.view='coach';else if(byId(h)){ui.view='athlete';ui.sel=h;ui.pick=null}render();window.scrollTo(0,0)});
+window.addEventListener('hashchange',function(){if(!db)return;var c=hashCode();if(!auth&&c){openCode(c,true);return}if(canEdit&&location.hash==='#team'){ui.view='team';render();window.scrollTo(0,0)}});
+window.addEventListener('beforeunload',function(e){if(canEdit&&Object.keys(draft).some(function(k){return Object.keys(draft[k]).length})){e.preventDefault();e.returnValue=''}});
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(ui.view==='athlete')drawChart()},150)});
 
 render();
+boot();
 })();
