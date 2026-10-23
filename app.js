@@ -17,7 +17,7 @@ var COACH_EMAILS=(window.COACH_EMAILS||[]).map(function(e){return String(e).trim
 var state={project:'Þolþjálfun',athletes:[]};
 var data={};
 var app=document.getElementById('app');
-var team=null,teamDoc=null,regroups={},newGroup='1',canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
+var share={open:false,fmt:'story',bg:'dark',file:null,busy:false},pwLoginErr='',showPw=false,pwErr='',pwMsg='',team=null,teamDoc=null,regroups={},newGroup='1',canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
 var ui={view:'athlete',sel:null,filter:'all',pick:null,coachSession:'w1t1',egroup:'1',tgroup:'all',selfSession:null};
 try{var saved=JSON.parse(sessionStorage.getItem('tt-ui')||'null');if(saved){ui.view=saved.view||ui.view;ui.coachSession=saved.coachSession||ui.coachSession;if(saved.sel)ui.sel=saved.sel;}}catch(e){}
 var db=null,fauth=null;
@@ -65,6 +65,27 @@ function openCode(code,remember){
   if(remember){try{localStorage.setItem('tt-code',code)}catch(e){}}
   render();
  }).catch(function(){busy='';booting=false;loginErr='Ekki tókst að tengjast. Athugaðu netsambandið og reyndu aftur.';render()});
+}
+function pwLogin(){
+ var em=document.getElementById('pw-email').value.trim(),pw=document.getElementById('pw-pass').value;
+ if(!em||!pw){pwLoginErr='Skrifaðu netfang og lykilorð.';render();return}
+ busy='code';pwLoginErr='';loginErr='';render();
+ fauth.signInWithEmailAndPassword(em,pw).then(function(){busy=''}).catch(function(e){busy='';
+  var c=e&&e.code;
+  pwLoginErr=(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-login-credentials')?'Rangt netfang eða lykilorð. Ef þú hefur ekki sett lykilorð enn, gerðu það fyrst í tölvunni (Skrá niðurstöður → Innskráning í síma og iPad).':c==='auth/operation-not-allowed'?'Það á eftir að kveikja á Email/Password í Firebase (Authentication → Sign-in method).':c==='auth/too-many-requests'?'Of margar tilraunir. Bíddu í smá stund og reyndu aftur.':'Innskráning tókst ekki ('+c+').';
+  render()});
+}
+function setPassword(){
+ var a=document.getElementById('np1').value,b=document.getElementById('np2').value,u=fauth&&fauth.currentUser;
+ pwErr='';pwMsg='';
+ if(!u){return}
+ if(a.length<8){pwErr='Lykilorðið þarf að vera minnst 8 stafir.';render();return}
+ if(a!==b){pwErr='Lykilorðin eru ekki eins.';render();return}
+ var has=(u.providerData||[]).some(function(p){return p.providerId==='password'});
+ busy='save';render();
+ var job=has?u.updatePassword(a):u.linkWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,a));
+ job.then(function(){busy='';pwMsg='Lykilorð vistað. Nú geturðu skráð þig inn í síma með '+u.email+' og þessu lykilorði.';render()}).catch(function(e){busy='';var c=e&&e.code;
+  pwErr=c==='auth/requires-recent-login'?'Af öryggisástæðum: skráðu þig út og inn aftur með Google, og reyndu svo aftur.':c==='auth/operation-not-allowed'?'Kveiktu fyrst á Email/Password í Firebase: Authentication → Sign-in method → Add new provider → Email/Password → Enable.':c==='auth/weak-password'?'Lykilorðið er of veikt. Notaðu lengra lykilorð.':'Tókst ekki ('+c+').';render()});
 }
 function coachLogin(){
  var pr=new firebase.auth.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
@@ -130,6 +151,7 @@ function countDone(x){return SESSIONS.filter(function(s){return x[s.k]}).length}
 function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.view,coachSession:ui.coachSession,sel:ui.sel}))}catch(e){}}
 
 function render(){
+ if(share.open&&!auth)closeShare();
  var me=auth&&!canEdit?byId(auth.who):null,selfOK=!!(me&&me.group===2);
  var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['coach','Skrá niðurstöður']]:selfOK?[['athlete','Mínar niðurstöður'],['self','Skrá æfingu']]:[];
  if(auth&&!canEdit){ui.sel=auth.who;if(ui.view!=='self'||!selfOK)ui.view='athlete'}
@@ -147,6 +169,7 @@ function render(){
  html+='</main>';
  app.innerHTML=html;
  if(ui.view==='athlete')drawChart();
+ if(share.open&&(ui.view!=='athlete'||!auth))closeShare();
 }
 
 function athleteView(){
@@ -163,7 +186,7 @@ function athleteView(){
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1rpm(x.w1t1)+' rpm'+(t1b!=null?' → mín '+t1b+' · '+t1rpm(x.w5t1)+' rpm':' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Æfingar kláraðar',countDone(x)+'<span style="font-size:.55em;color:var(--muted)"> / 10</span>','Próf og æfingar');
- html+='</div></section>'+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x);
+ html+='</div></section>'+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x);
  return html;
 }
 function vsCard(x){
@@ -185,6 +208,97 @@ function vsCard(x){
   html+='<div class="vs-row"><div class="vs-l">'+r.l+'</div>'+bar(r.y,'you')+bar(r.g,'grp')+'</div>'});
  return html+'</div></section>';
 }
+// ---------- Share image ----------
+function shareStats(x){
+ var out=[],a1=x.w1t1,b1=x.w5t1,t1a=a1&&a1.min,t1b=b1&&b1.min,c1=total(x.w1t2),c5=total(x.w5t2);
+ if(t1a!=null&&t1b!=null)out.push({label:'Próf 1 · Hámarkspúlspróf',value:sign(t1b-t1a,function(v){return v+' mín'}),sub:'Mínúta '+t1a+' → '+t1b+'  ·  '+t1rpm(a1)+' → '+t1rpm(b1)+' rpm'});
+ else if(t1a!=null)out.push({label:'Próf 1 · Hámarkspúlspróf',value:t1a+' mín',sub:'Kláraði '+t1rpm(a1)+' rpm'});
+ if(c1!=null&&c5!=null)out.push({label:'Próf 2 · 3 × 10 mín',value:sign(c5-c1,function(v){return v+' kal'}),sub:c1+' → '+c5+' kaloríur samtals'});
+ else if(c1!=null)out.push({label:'Próf 2 · 3 × 10 mín',value:c1+' kal',sub:'BikeErg, róðravél og Assault-hjól'});
+ var sa=a1&&a1.stages||[],sb=b1&&b1.stages||[],n=0,d=0;for(var i=0;i<Math.min(sa.length,sb.length);i++)if(sa[i]!=null&&sb[i]!=null){d+=sb[i]-sa[i];n++}
+ if(n>=2&&Math.round(d/n)<0)out.push({label:'Lægri púls á sömu ákefð',value:Math.round(-d/n)+' slög',sub:'hjartað slær hægar undir sama álagi'});
+ var r1=recov(a1),r5=recov(b1);if(r1!=null&&r5!=null&&r5>r1)out.push({label:'Hraðari endurheimt',value:'+'+(r5-r1)+' slög',sub:'púlsinn fellur hraðar eftir átak'});
+ var done=countDone(x);if(done)out.push({label:'Æfingar',value:done+' / 10',sub:done>=10?'allar kláraðar':'kláraðar'});
+ return out.slice(0,4);
+}
+function shareBar(x){
+ if(!shareStats(x).length)return'';
+ return'<section class="share-bar"><div><b>Deildu árangrinum</b><span>Mynd fyrir Instagram, með eða án bakgrunns.</span></div><button class="btn" data-act="share-open">Búa til mynd</button></section>';
+}
+var LOGO=null;
+function loadLogo(){if(LOGO)return LOGO;LOGO=new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src='logo-box800-white.png'});return LOGO}
+function fontsReady(){if(!document.fonts||!document.fonts.load)return Promise.resolve();return Promise.all(['700 100px "Barlow Condensed"','600 40px "Barlow"','500 40px "Barlow"'].map(function(f){return document.fonts.load(f).catch(function(){})}))}
+var CF='"Barlow Condensed","Arial Narrow",sans-serif',BF='"Barlow",system-ui,sans-serif';
+function fit(ctx,text,weight,fam,size,min,maxW){var sz=size;do{ctx.font=weight+' '+sz+'px '+fam;if(ctx.measureText(text).width<=maxW)break;sz-=2}while(sz>min);return sz}
+function spaced(ctx,px){if('letterSpacing' in ctx)ctx.letterSpacing=px+'px'}
+function drawShare(cv,x,name,project,logo,fmt,bg){
+ var W=1080,H=fmt==='story'?1920:1080,S=fmt==='story';cv.width=W;cv.height=H;
+ var c=cv.getContext('2d'),pad=S?90:72,clear=bg==='clear';
+ c.clearRect(0,0,W,H);
+ if(!clear){var g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1b2835');g.addColorStop(1,'#0b1117');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.globalAlpha=.06;c.strokeStyle='#ffffff';c.lineWidth=2;for(var gy=S?760:470;gy<H-120;gy+=S?120:90){c.beginPath();c.moveTo(0,gy);c.lineTo(W,gy);c.stroke()}c.globalAlpha=1}
+ function shadow(on){c.shadowColor=on&&clear?'rgba(0,0,0,.55)':'transparent';c.shadowBlur=on&&clear?18:0;c.shadowOffsetY=on&&clear?3:0}
+ shadow(true);c.fillStyle='#ffffff';c.textBaseline='alphabetic';
+ // top: logo + label
+ var lh=S?96:72,top=S?100:66;
+ if(logo){var lw=lh*logo.width/logo.height;c.drawImage(logo,pad,top,lw,lh)}
+ c.textAlign='right';c.font='600 '+(S?34:28)+'px '+BF;spaced(c,S?6:5);c.globalAlpha=.8;c.fillText('ÞOLÞJÁLFUN',W-pad,top+lh*0.62);c.globalAlpha=1;spaced(c,0);
+ // name
+ c.textAlign='left';var ny=S?440:268,ns=fit(c,name,'700',CF,S?160:118,60,W-pad*2);c.font='700 '+ns+'px '+CF;c.fillText(name,pad,ny);
+ var hasW5=!!(x.w5t1||x.w5t2);
+ c.font='500 '+(S?44:34)+'px '+BF;c.globalAlpha=.82;c.fillText(hasW5?'5 vikna árangur':'Byrjunarpunktur · vika 1',pad,ny+(S?70:52));c.globalAlpha=1;
+ // ecg
+ var ey=S?620:388,amp=S?70:48;c.strokeStyle='#ff5a45';c.lineWidth=S?7:5;c.lineJoin='round';c.lineCap='round';c.beginPath();
+ var pts=[[0,0],[.30,0],[.33,-.25],[.36,0],[.42,0],[.45,.35],[.49,-1],[.53,.6],[.56,0],[.66,0],[.69,-.2],[.72,0],[1,0]];
+ pts.forEach(function(p,i){var px=p[0]*W,py=ey+p[1]*amp;if(i)c.lineTo(px,py);else c.moveTo(px,py)});c.stroke();
+ // stats
+ var st=shareStats(x);
+ function block(o,bx,by,bw,big){
+  c.fillStyle='#ff5a45';c.fillRect(bx,by,S?10:8,big*1.5);c.fillStyle='#ffffff';
+  var tx=bx+(S?36:28);
+  spaced(c,4);var ls=fit(c,o.label.toUpperCase(),'600',BF,Math.round(big*.2),12,bw-(tx-bx));c.font='600 '+ls+'px '+BF;c.globalAlpha=.78;c.fillText(o.label.toUpperCase(),tx,by+big*.2);c.globalAlpha=1;spaced(c,0);
+  var vs=fit(c,o.value,'700',CF,big,40,bw-(tx-bx));c.font='700 '+vs+'px '+CF;c.fillText(o.value,tx,by+big*.2+vs*.95);
+  var ss=fit(c,o.sub,'500',BF,Math.round(big*.25),16,bw-(tx-bx));c.font='500 '+ss+'px '+BF;c.globalAlpha=.88;c.fillText(o.sub,tx,by+big*.2+vs*.95+big*.5);c.globalAlpha=1;
+ }
+ if(S){var y0=760,y1=H-210,bh=Math.min(300,(y1-y0)/Math.max(st.length,1));st.forEach(function(o,i){block(o,pad,y0+i*bh,W-pad*2,Math.min(160,bh*.54))})}
+ else{var cols=st.length>1?2:1,rows=Math.ceil(st.length/cols),gx=40,cw=(W-pad*2-gx*(cols-1))/cols,y0=470,rh=Math.min(270,(H-110-y0)/rows);
+  st.forEach(function(o,i){block(o,pad+(i%cols)*(cw+gx),y0+Math.floor(i/cols)*rh,cw,Math.min(cols>1?110:150,rh*.5))})}
+ // footer
+ c.font='500 '+(S?36:28)+'px '+BF;c.globalAlpha=.7;c.textAlign='left';c.fillText(project,pad,H-(S?110:60));c.globalAlpha=1;
+ shadow(false);
+}
+function slug(t){return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/þ/g,'th').replace(/ð/g,'d').replace(/æ/g,'ae').replace(/ö/g,'o').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+function openShareModal(){
+ var a=byId(ui.sel);if(!a)return;var x=data[a.id]||{};
+ var m=document.getElementById('share-modal');
+ if(!m){m=document.createElement('div');m.id='share-modal';m.className='share-modal';document.body.appendChild(m)}
+ var touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+ m.innerHTML='<div class="share-box" role="dialog" aria-modal="true" aria-label="Deildu árangrinum"><div class="share-head"><h3>Deildu árangrinum</h3><button class="share-x" data-sact="close" aria-label="Loka">✕</button></div>'+
+  '<div class="share-opts"><div class="chips" role="group" aria-label="Stærð"><button class="chip sm" data-sact="fmt" data-v="story" aria-pressed="'+(share.fmt==='story')+'">Story 9:16</button><button class="chip sm" data-sact="fmt" data-v="square" aria-pressed="'+(share.fmt==='square')+'">Ferningur 1:1</button></div>'+
+  '<div class="chips" role="group" aria-label="Bakgrunnur"><button class="chip sm" data-sact="bg" data-v="dark" aria-pressed="'+(share.bg==='dark')+'">Dökkur bakgrunnur</button><button class="chip sm" data-sact="bg" data-v="clear" aria-pressed="'+(share.bg==='clear')+'">Gegnsær</button></div></div>'+
+  '<div class="share-prev'+(share.bg==='clear'?' checker':'')+'"><img id="share-img" alt="Mynd með árangri '+esc(a.name)+'"><span id="share-wait">Teikna…</span></div>'+
+  '<div class="actions"><button class="btn" data-sact="save" id="share-save" disabled>'+(touch?'Vista eða deila':'Sækja mynd')+'</button></div>'+
+  '<p class="desc">'+(share.bg==='clear'?'Gegnsæ mynd er til að setja ofan á þína eigin mynd, t.d. í Instagram story. ':'')+(touch?'Veldu „Vista mynd“ eða Instagram. Þú getur líka haldið fingri á myndinni.':'Myndin vistast sem PNG-skrá.')+'</p></div>';
+ share.file=null;
+ Promise.all([loadLogo(),fontsReady()]).then(function(r){
+  var cv=document.createElement('canvas');drawShare(cv,x,a.name,state.project||'Þolþjálfun',r[0],share.fmt,share.bg);
+  var img=document.getElementById('share-img');if(!img)return;img.src=cv.toDataURL('image/png');var w=document.getElementById('share-wait');if(w)w.remove();
+  cv.toBlob(function(b){if(!b)return;share.file=new File([b],'tholthjalfun-'+slug(a.name)+'-'+share.fmt+(share.bg==='clear'?'-gegnsae':'')+'.png',{type:'image/png'});var sb=document.getElementById('share-save');if(sb)sb.disabled=false},'image/png');
+ });
+}
+function closeShare(){share.open=false;var m=document.getElementById('share-modal');if(m)m.remove()}
+function saveShare(){
+ var f=share.file;if(!f)return;
+ var touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+ if(touch&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(function(){});return}
+ var url=URL.createObjectURL(f),l=document.createElement('a');l.href=url;l.download=f.name;document.body.appendChild(l);l.click();l.remove();setTimeout(function(){URL.revokeObjectURL(url)},3000);
+}
+document.addEventListener('click',function(e){var el=e.target.closest&&e.target.closest('[data-sact]');var m=document.getElementById('share-modal');
+ if(m&&e.target===m){closeShare();return}
+ if(!el)return;var k=el.getAttribute('data-sact');
+ if(k==='close')closeShare();else if(k==='fmt'){share.fmt=el.getAttribute('data-v');openShareModal()}else if(k==='bg'){share.bg=el.getAttribute('data-v');openShareModal()}else if(k==='save')saveShare()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&share.open)closeShare()});
+
 function stat(k,v,s){return'<div class="stat"><div class="k">'+k+'</div><div class="v num">'+v+'</div><div class="s num">'+s+'</div></div>'}
 
 function test1Card(x){
@@ -197,7 +311,9 @@ function test1Card(x){
   var t=r[1]&&r[1].min;
   html+='<div class="cmp-row"><span class="lab">'+r[0]+'</span><div class="bar">'+(t!=null?'<i class="'+r[2]+'" style="width:'+Math.max(18,t/mx*100)+'%"></i><span class="num">Mínúta '+t+' · '+t1rpm(r[1])+' rpm</span>':'<span class="num" style="color:var(--muted);font-weight:500">Endurpróf í viku 5</span>')+'</div></div>';
  });
- html+='</div>'+stageBlock(a,b)+miniTable(a,b);
+ html+='</div>'+stageBlock(a,b)+miniTable(a,b,true);
+ var ra=recov(a),rb=recov(b);
+ if(ra!=null||rb!=null)html+='<div class="trend">'+(ra!=null&&rb!=null?'Endurheimt: púlsinn féll um <b class="num">'+ra+'</b> slög á 1 mín í viku 1 og <b class="num">'+rb+'</b> í viku 5. '+(rb>ra?'Hraðari endurheimt þýðir betra þol.':''):'Endurheimt: púlsinn féll um <b class="num">'+(ra!=null?ra:rb)+'</b> slög fyrstu mínútuna eftir prófið. Því meira, því betra.')+'</div>';
  var hm=hrMax(x);
  if(hm){
   var z=[[50,60,'Z1'],[60,70,'Z2'],[70,80,'Z3'],[80,90,'Z4'],[90,100,'Z5']];
@@ -235,11 +351,15 @@ function stageBlock(a,b){
  for(var k=0;k<n;k++){var va=sa[k],vb=sb[k];html+='<tr><td>'+(k+1)+'</td><td>'+rpmFor(k+1)+'</td><td>'+(va!=null?va:'—')+'</td><td>'+(vb!=null?vb:'—')+'</td><td>'+(va!=null&&vb!=null?sign(vb-va):'—')+'</td></tr>'}
  return html+'</tbody></table></div></details></div>';
 }
-function miniTable(a,b){
- var rows=[['Meðalpúls','avg',' bpm'],['Hámarkspúls','max',' bpm'],['Heildarkaloríur (Polar)','kcal','']];
+function recov(v){return v&&v.max!=null&&v.rec!=null&&v.max>=v.rec?v.max-v.rec:null}
+function miniTable(a,b,t1){
+ var rows=[['Meðalpúls','avg',' bpm'],['Hámarkspúls','max',' bpm']];
+ if(t1)rows.push(['Púls 1 mín eftir próf','rec',''],['Endurheimt (slög á 1 mín)',recov,'']);
+ rows.push(['Heildarkaloríur (Polar)','kcal','']);
+ function g(o,r){return typeof r[1]==='function'?r[1](o):(o&&o[r[1]])}
  var html='<table class="mini num"><thead><tr><th></th><th>Vika 1</th><th>Vika 5</th><th>Breyting</th></tr></thead><tbody>';
- rows=rows.filter(function(r){return(a&&a[r[1]]!=null)||(b&&b[r[1]]!=null)});if(!rows.length)return'';
- rows.forEach(function(r){var va=a&&a[r[1]],vb=b&&b[r[1]],d=(va!=null&&vb!=null)?vb-va:null;
+ rows=rows.filter(function(r){return g(a,r)!=null||g(b,r)!=null});if(!rows.length)return'';
+ rows.forEach(function(r){var va=g(a,r),vb=g(b,r),d=(va!=null&&vb!=null)?vb-va:null;
   html+='<tr><td>'+r[0]+'</td><td>'+(va!=null?va:'—')+'</td><td>'+(vb!=null?vb:'—')+'</td><td>'+sign(d)+'</td></tr>'});
  return html+'</tbody></table>';
 }
@@ -281,6 +401,7 @@ function sessionsCard(x){
   html+='<div class="m">Meðalpúls <b class="num">'+(v.avg!=null?v.avg:'—')+'</b>'+(hm&&v.avg?' <span class="num">('+Math.round(v.avg/hm*100)+'% af hámarki)</span>':'')+'</div>';
   html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div><div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>';
   if(s.type==='t1'&&v.min!=null)html+='<div class="m">Kláraði <b class="num">mín '+v.min+' · '+t1rpm(v)+' rpm</b></div>';
+  if(s.type==='t1'&&recov(v)!=null)html+='<div class="m">Endurheimt <b class="num">'+recov(v)+' slög</b> á 1 mín</div>';
   if(s.type==='t2'&&total(v)!=null){MACHINES.forEach(function(m){if(v[m[0]]!=null)html+='<div class="m">'+m[1]+' <b class="num">'+v[m[0]]+'</b></div>'});html+='<div class="m">Samtals á tækjum <b class="num">'+total(v)+'</b></div>'}
   var ts=tsess(pk);
   if(ts&&(ts.avg!=null||ts.max!=null))html+='<div class="m team-line">Meðaltal hópsins: meðalpúls <b class="num">'+(ts.avg!=null?Math.round(ts.avg):'—')+'</b> · hámarkspúls <b class="num">'+(ts.max!=null?Math.round(ts.max):'—')+'</b>'+(ts.kcal!=null?' · kaloríur <b class="num">'+Math.round(ts.kcal)+'</b>':'')+'</div>';
@@ -387,7 +508,8 @@ function board(title,desc,rows,k,fmt,extra){
 
 function loginView(){
  var html='<section class="card login"><h3>Opnaðu þínar niðurstöður</h3><p class="desc">Sláðu inn kóðann sem þjálfarinn gaf þér.</p><form id="login-form" class="login-form" autocomplete="off"><label class="f" for="login-code">Kóðinn þinn<input id="login-code" class="code-in" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX"></label><label class="remember" for="login-remember"><input id="login-remember" type="checkbox" checked> Muna eftir mér á þessu tæki</label><button class="btn" type="submit"'+(busy?' disabled':'')+'>'+(busy==='code'?'Opna…':'Opna')+'</button></form>'+(loginErr?'<p class="err" role="alert">'+esc(loginErr)+'</p>':'')+'</section>';
- html+='<div class="coach-login"><button class="btn ghost" data-act="coach-login">Þjálfari? Skráðu þig inn með Google</button></div>';
+ html+='<div class="coach-login"><button class="btn ghost" data-act="coach-login">Þjálfari? Skráðu þig inn með Google</button>'+
+  (showPw?'<form id="pw-form" class="pw-form" autocomplete="on"><label class="f" for="pw-email">Netfang þjálfara<input id="pw-email" type="email" autocomplete="username" value="'+esc(COACH_EMAILS[0]||'')+'"></label><label class="f" for="pw-pass">Lykilorð<input id="pw-pass" type="password" autocomplete="current-password"></label><button class="btn" type="submit"'+(busy?' disabled':'')+'>Skrá inn</button>'+(pwLoginErr?'<p class="err" role="alert" style="margin:0">'+esc(pwLoginErr)+'</p>':'')+'</form>':'<button class="linkbtn" data-act="show-pw">Í síma? Skráðu þig inn með lykilorði</button>')+'</div>';
  return html;
 }
 function tryLogin(){var c=document.getElementById('login-code').value,rem=document.getElementById('login-remember').checked;loginErr='';openCode(c,rem)}
@@ -397,13 +519,13 @@ function coachView(){
  var zf=[['z5','Svæði 5<small>mín:sek</small>'],['z4','Svæði 4<small>mín:sek</small>'],['z3','Svæði 3<small>mín:sek</small>'],['z2','Svæði 2<small>mín:sek</small>'],['z1','Svæði 1<small>mín:sek</small>']];
  var real=data;
  var fields;
- if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['kcal','Polar kaloríur'])}
+ if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['rec','Púls 1 mín<small>eftir próf</small>'],['kcal','Polar kaloríur'])}
  else if(s.type==='t2'){fields=[['avg','Meðalpúls'],['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])});fields.push(['kcal','Polar kaloríur'])}
  else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.<small>úr Polar</small>']];
  fields=fields.concat(zf);
  var html='';
  if(!state.athletes.length)html+='<div class="banner"><b>Byrjaðu á að bæta við iðkendum</b> neðar á síðunni. Hver iðkandi fær sinn eigin kóða sem þú sendir honum.</div>';
- html+='<section class="card"><div class="coach-top"><div><h3>Skrá niðurstöður</h3><p class="desc" style="margin-bottom:0">Veldu æfingu, sláðu inn tölur hvers iðkanda úr Polar og vistaðu. Skildu línu eftir auða ef einhver mætti ekki. Tími í svæðum er í sömu röð og hjá Polar (svæði 5 efst), skráður eins og Polar sýnir hann, t.d. 22:16 eða 00:22:16.'+(s.type==='t1'?' Í Prófi 1 er einn reitur fyrir hverja mínútu. Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Fjöldi útfylltra reita segir hvað hann kláraði margar mínútur og hvaða RPM, og hæsti púlsinn fer í hámarkspúls ef þú skrifar ekki annað.':'')+'</p></div><div class="coach-sel"><label class="f" for="c-group">Hópur<select id="c-group"><option value="1"'+(ui.egroup==='1'?' selected':'')+'>Hópur 1 · á staðnum</option><option value="2"'+(ui.egroup==='2'?' selected':'')+'>Hópur 2 · fjarþjálfun</option><option value="all"'+(ui.egroup==='all'?' selected':'')+'>Allir</option></select></label><label class="f" for="c-session">Æfing<select id="c-session">';
+ html+='<section class="card"><div class="coach-top"><div><h3>Skrá niðurstöður</h3><p class="desc" style="margin-bottom:0">Veldu æfingu, sláðu inn tölur hvers iðkanda úr Polar og vistaðu. Skildu línu eftir auða ef einhver mætti ekki. Tími í svæðum er í sömu röð og hjá Polar (svæði 5 efst), skráður eins og Polar sýnir hann, t.d. 22:16 eða 00:22:16.'+(s.type==='t1'?' Í Prófi 1 er einn reitur fyrir hverja mínútu. Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Fjöldi útfylltra reita segir hvað hann kláraði margar mínútur og hvaða RPM, og hæsti púlsinn fer í hámarkspúls ef þú skrifar ekki annað. „Púls 1 mín“ er púlsinn 60 sekúndum eftir að iðkandinn hætti.':'')+'</p></div><div class="coach-sel"><label class="f" for="c-group">Hópur<select id="c-group"><option value="1"'+(ui.egroup==='1'?' selected':'')+'>Hópur 1 · á staðnum</option><option value="2"'+(ui.egroup==='2'?' selected':'')+'>Hópur 2 · fjarþjálfun</option><option value="all"'+(ui.egroup==='all'?' selected':'')+'>Allir</option></select></label><label class="f" for="c-session">Æfing<select id="c-session">';
  var elist=inGroup(ui.egroup);
  SESSIONS.forEach(function(q){var n=elist.filter(function(a){return real[a.id]&&real[a.id][q.k]}).length;html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(n?' ('+n+' skráðir)':'')+'</option>'});
  html+='</select></label></div></div>'+(ui.egroup==='2'?'<p class="desc" style="margin-top:12px">Iðkendur í hópi 2 skrá sjálfir. Hér geturðu leiðrétt tölurnar þeirra.</p>':'')+'<div class="tablewrap"><table class="entry'+(s.type==='t1'?' steps':'')+'"><thead><tr><th>Iðkandi</th>';
@@ -425,6 +547,8 @@ function coachView(){
   html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save-names"'+(busy?' disabled':'')+'>Vista breytingar</button></div>';
  }
  html+='<div class="add-athletes"><label class="f" for="new-names">Bæta við iðkendum<textarea id="new-names" rows="4" placeholder="Eitt nafn í hverja línu">'+esc(newNames)+'</textarea></label><div class="actions" style="margin-top:8px"><select id="new-group" aria-label="Hópur nýrra iðkenda"><option value="1"'+(newGroup==='1'?' selected':'')+'>Í hóp 1 · á staðnum</option><option value="2"'+(newGroup==='2'?' selected':'')+'>Í hóp 2 · fjarþjálfun</option></select><button class="btn" data-act="add-athletes"'+(busy?' disabled':'')+'>Bæta við</button></div></div></section>';
+ var cu=fauth&&fauth.currentUser,hasPw=cu&&(cu.providerData||[]).some(function(p){return p.providerId==='password'});
+ html+='<section class="card"><h3>Innskráning í síma og iPad</h3><p class="desc">Google-innskráning virkar ekki alltaf í símum. Settu lykilorð hér og notaðu svo <b>Í síma? Skráðu þig inn með lykilorði</b> á innskráningarskjánum, með netfanginu '+esc(cu&&cu.email||'')+'.'+(hasPw?' <span class="up">Lykilorð er þegar sett.</span> Þú getur breytt því hér.':'')+'</p><div class="self-grid"><label class="f" for="np1">'+(hasPw?'Nýtt lykilorð':'Lykilorð')+'<input id="np1" type="password" autocomplete="new-password"></label><label class="f" for="np2">Aftur<input id="np2" type="password" autocomplete="new-password"></label></div><div class="actions"><button class="btn" data-act="set-pw"'+(busy?' disabled':'')+'>Vista lykilorð</button></div>'+(pwErr?'<p class="err">'+esc(pwErr)+'</p>':'')+(pwMsg?'<p class="ok">'+esc(pwMsg)+'</p>':'')+'</section>';
  html+='<section class="card"><h3>Titill og afrit</h3><p class="desc">Titillinn birtist efst á síðunni hjá öllum.</p><label class="f" for="n-project">Titill verkefnis<input id="n-project" value="'+esc(renames.__title!=null?renames.__title:state.project)+'"></label><div class="actions"><button class="btn" data-act="save-title"'+(busy?' disabled':'')+'>Vista titil</button><button class="btn ghost" data-act="backup">Sækja afrit (JSON)</button></div><p class="desc" style="margin-top:10px">Afritið er skrá með öllum gögnum. Gott að sækja það í lok hverrar viku.</p></section>';
  return html;
 }
@@ -432,7 +556,7 @@ function coachView(){
 function athleteRef(id){return db.collection('athletes').doc(id)}
 function minFor(rpm){return rpm<=60?Math.floor((rpm-50)/2)+1:rpm-54}
 function selfFields(s){
- if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
+ if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Sittu kyrr á hjólinu.'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
  var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
  if(s.type==='t2')MACHINES.forEach(function(m){f.push([m[0],m[1]+' · kaloríur á tækinu','Talan sem tækið sýnir eftir 10 mínútur.'])});
  return f;
@@ -467,7 +591,7 @@ function selfSave(clear){
    if(raw===''){delete rec[f[0]];return}
    v=/^z/.test(f[0])?parseTime(raw):Math.round(Number(raw.replace(',','.')));
    if(v==null||isNaN(v)||v<0){bad=f[1]||'svæði';return}
-   if((f[0]==='max'||f[0]==='avg')&&(v<40||v>240)){bad=f[1];return}
+   if((f[0]==='max'||f[0]==='avg'||f[0]==='rec')&&(v<40||v>240)){bad=f[1];return}
    if(f[0]==='rpm'&&(v<50||v>90)){bad=f[1];return}
    rec[f[0]]=v});
   if(bad){toast('Athugaðu reitinn „'+bad.replace(/ ·.*/,'')+'“. Notaðu tölur, t.d. 163, og tíma eins og 22:16.');return}
@@ -559,6 +683,9 @@ app.addEventListener('click',function(e){
  else if(act==='save')save();
  else if(act==='logout')logout();
  else if(act==='coach-login')coachLogin();
+ else if(act==='show-pw'){showPw=true;loginErr='';render();var pe=document.getElementById('pw-pass');if(pe)pe.focus()}
+ else if(act==='set-pw')setPassword();
+ else if(act==='share-open'){share.open=true;openShareModal()}
  else if(act==='add-athletes')addAthletes();
  else if(act==='save-names')saveNames();
  else if(act==='save-title')saveTitle();
@@ -593,7 +720,7 @@ app.addEventListener('input',function(e){var t=e.target;
  else if(t.id==='me-rpm'){var o=document.getElementById('me-t1'),r=parseInt(t.value,10);if(o)o.textContent=r>=50&&r<=90?'= '+minFor(r)+' mínútur':''}
  else if(t.id==='login-code'){var pos=t.value.length;var nv=normCode(t.value);if(nv.replace('-','').length===8&&nv!==t.value)t.value=nv}
 });
-app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();tryLogin()}});
+app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();tryLogin()}else if(e.target.id==='pw-form'){e.preventDefault();pwLogin()}});
 app.addEventListener('change',function(e){var t=e.target;
  if(t.id==='c-session'){ui.coachSession=t.value;persistUi();render()}
  else if(t.id==='c-group'){ui.egroup=t.value;render()}

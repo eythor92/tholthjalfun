@@ -60,6 +60,12 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 - Hver iðkandi ber sig saman við meðaltal **síns hóps**. Meðaltal hóps 2 uppfærist þegar þú opnar þjálfarasíðuna, svo gott er að kíkja inn einu sinni til tvisvar í viku.
 - Iðkandi í hópi 2 getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
 
+## Innskráning þjálfara í síma og iPad
+Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá notarðu lykilorð:
+1. **Einu sinni í Firebase:** Authentication → Sign-in method → **Add new provider** → **Email/Password** → kveikja á **Enable** (ekki "Email link") → **Save**.
+2. **Einu sinni í tölvunni:** Skráðu þig inn með Google → Skrá niðurstöður → **Innskráning í síma og iPad** → veldu lykilorð (minnst 8 stafir) → **Vista lykilorð**.
+3. **Í símanum:** Á innskráningarskjánum, smelltu á **Í síma? Skráðu þig inn með lykilorði**, skrifaðu netfangið og lykilorðið.
+
 ## Eftir hverja æfingu
 1. Opnaðu síðuna (þú ert áfram innskráður á tækinu).
 2. **Skrá niðurstöður** → veldu æfinguna → sláðu inn tölurnar úr Polar → **Vista æfingu**.
@@ -68,10 +74,11 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 Hvað er skráð:
 - Úr Polar skráir þú alltaf bpm (ekki %): HR AVG í Meðalpúls, HR MAX í Hámarkspúls og CALORIES í Kaloríur.
 - **Tími í svæðum** er í sömu röð og hjá Polar (svæði 5 fyrst). Skrifaðu tímann eins og Polar sýnir hann, t.d. `00:22:16` eða `22:16`. Það má sleppa honum.
-- Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar.
+- Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar. Í reitinn **Púls 1 mín** skráirðu púlsinn nákvæmlega 60 sekúndum eftir að iðkandinn hætti (sitjandi kyrr á hjólinu). Síðan reiknar út **endurheimt**: hámarkspúls mínus púls eftir 1 mín.
 
 ## Gott að vita
 - **Meðaltal hópsins:** Iðkendur sjá spjaldið „Þú og hópurinn“ og strikaða línu fyrir meðalpúls hópsins í grafinu. Meðaltalið uppfærist í hvert sinn sem þú vistar. Það birtist aðeins þegar a.m.k. 3 iðkendur eru með tölur, svo enginn geti reiknað út tölur annarra.
+- **Mynd fyrir Instagram:** Á síðu hvers iðkanda er takkinn **Búa til mynd**. Þar velur maður Story (9:16) eða ferning (1:1), og dökkan eða gegnsæjan bakgrunn. Í síma fer myndin beint í myndasafnið eða á Instagram. Þú getur líka búið hana til fyrir iðkendur þegar þú skoðar síðuna þeirra sem þjálfari.
 - **Kóðar:** Ef kóði fer á flakk smellirðu á **Nýr kóði**. Gamli kóðinn hættir þá að virka og öll gögn haldast. Sendu iðkandanum nýja hlekkinn.
 - **Afrit:** **Sækja afrit (JSON)** sækir skrá með öllum gögnum. Gott að gera það í lok hverrar viku.
 - **Öryggi:** Iðkendur geta bara sótt sitt eigið skjal með kóðanum og geta hvorki séð lista yfir aðra né breytt neinu. Aðeins netfangið í reglunum getur skráð og breytt.
