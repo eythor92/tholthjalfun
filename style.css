@@ -246,3 +246,4 @@ table.entry.codes select{min-width:180px}
 .wk-body div{font-size:14.5px;line-height:1.5;color:var(--ink)}
 .plan-show{background:var(--soft);border-radius:10px;padding:10px 12px;margin:4px 0 10px;font-size:14.5px;line-height:1.5}
 .plan-show b{display:block;margin-bottom:3px}
+.plan-copy{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.plan-copy .btn.sm{padding:9px 14px}

@@ -52,13 +52,13 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 2. Farðu í **Skrá niðurstöður → Iðkendur og kóðar**. Skrifaðu nöfnin, eitt í hverja línu, og smelltu á **Bæta við**.
 3. Hver iðkandi fær kóða. Smelltu á **Afrita hlekk** og sendu hverjum sinn hlekk (t.d. í skilaboðum). Hlekkurinn opnar síðuna hans beint, og síminn man eftir honum.
 
-## Tveir hópar
-- **Hópur 1 · á staðnum:** þú skráir tölurnar. Iðkendur sjá bara.
-- **Hópur 2 · fjarþjálfun:** iðkendur fá flipann **Skrá æfingu** og skrá sjálfir meðalpúls, hámarkspúls og kaloríur. Í Prófi 1 skrá þeir síðasta RPM og hámarkspúls, og síðan reiknar mínúturnar. Tími í svæðum er valfrjáls.
+## Hópar
+- **Hópur 1 · á staðnum** og **Hópur 3 · framhald:** þú skráir tölurnar. Iðkendur sjá bara.
+- **Hópur 2 · fjarþjálfun** og **Hópur 4 · framhald fjarþjálfun:** iðkendur fá flipann **Skrá æfingu** og skrá sjálfir meðalpúls, hámarkspúls og kaloríur. Í Prófi 1 skrá þeir síðasta RPM og hámarkspúls, og síðan reiknar mínúturnar. Tími í svæðum er valfrjáls.
 - Þú velur hóp þegar þú bætir við iðkendum og getur breytt honum í töflunni **Iðkendur og kóðar** (smelltu svo á **Vista breytingar**).
 - Í **Skrá niðurstöður** velurðu hópinn efst. Þú getur líka leiðrétt tölur fjariðkenda þar.
 - Hver iðkandi ber sig saman við meðaltal **síns hóps**. Meðaltal hóps 2 uppfærist þegar þú opnar þjálfarasíðuna, svo gott er að kíkja inn einu sinni til tvisvar í viku.
-- Iðkandi í hópi 2 getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
+- Iðkandi í fjarþjálfun getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
 
 ## Innskráning þjálfara í síma og iPad
 Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá notarðu lykilorð:
@@ -70,7 +70,7 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 - Flipinn **Æfingaplan** (aðeins fyrir þjálfara) geymir 10 æfingar fyrir hvorn hóp: titil og lýsingu fyrir hverja æfingu, vika 1–5.
 - **Birta hjá iðkendum:** veldu vikuna sem er í gangi og smelltu á **Vista æfingaplan**. Iðkendur í hópnum sjá báðar æfingar vikunnar efst á síðunni sinni.
 - Fyrir prófin er takkinn **Nota lýsingu prófsins** sem fyllir út framkvæmdina.
-- Í hópi 2 er takkinn **Afrita allt úr hópi 1**. Breyttu svo því sem er öðruvísi fyrir fjarþjálfun og vistaðu.
+- **Afrita æfingar úr:** veldu annan hóp og smelltu tvisvar á **Afrita** til að fá æfingarnar hans. Breyttu svo því sem er öðruvísi og vistaðu.
 - Fjariðkendur sjá líka lýsinguna þegar þeir velja æfingu í **Skrá æfingu**.
 - Mundu að skipta um viku á mánudögum.
 

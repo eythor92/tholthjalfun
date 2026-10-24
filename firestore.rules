@@ -14,10 +14,10 @@ service cloud.firestore {
       // Iðkandi getur sótt sitt skjal ef hann veit kóðann, en ekki skoðað listann.
       allow get: if true;
       allow list, create, delete: if isCoach();
-      // Þjálfari má breyta öllu. Iðkandi í hópi 2 (fjarþjálfun) má aðeins
+      // Þjálfari má breyta öllu. Iðkandi í fjarþjálfun (hópur 2 og 4) má aðeins
       // breyta æfingatölunum sínum, ekki nafni, hópi eða röð.
       allow update: if isCoach()
-        || (resource.data.group == 2
+        || (resource.data.group in [2, 4]
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'updated'])
             && request.resource.data.data is map);
     }
