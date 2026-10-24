@@ -66,6 +66,14 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 2. **Einu sinni í tölvunni:** Skráðu þig inn með Google → Skrá niðurstöður → **Innskráning í síma og iPad** → veldu lykilorð (minnst 8 stafir) → **Vista lykilorð**.
 3. **Í símanum:** Á innskráningarskjánum, smelltu á **Í síma? Skráðu þig inn með lykilorði**, skrifaðu netfangið og lykilorðið.
 
+## Æfingaplan
+- Flipinn **Æfingaplan** (aðeins fyrir þjálfara) geymir 10 æfingar fyrir hvorn hóp: titil og lýsingu fyrir hverja æfingu, vika 1–5.
+- **Birta hjá iðkendum:** veldu vikuna sem er í gangi og smelltu á **Vista æfingaplan**. Iðkendur í hópnum sjá báðar æfingar vikunnar efst á síðunni sinni.
+- Fyrir prófin er takkinn **Nota lýsingu prófsins** sem fyllir út framkvæmdina.
+- Í hópi 2 er takkinn **Afrita allt úr hópi 1**. Breyttu svo því sem er öðruvísi fyrir fjarþjálfun og vistaðu.
+- Fjariðkendur sjá líka lýsinguna þegar þeir velja æfingu í **Skrá æfingu**.
+- Mundu að skipta um viku á mánudögum.
+
 ## Eftir hverja æfingu
 1. Opnaðu síðuna (þú ert áfram innskráður á tækinu).
 2. **Skrá niðurstöður** → veldu æfinguna → sláðu inn tölurnar úr Polar → **Vista æfingu**.

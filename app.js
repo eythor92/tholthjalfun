@@ -17,7 +17,7 @@ var COACH_EMAILS=(window.COACH_EMAILS||[]).map(function(e){return String(e).trim
 var state={project:'Þolþjálfun',athletes:[]};
 var data={};
 var app=document.getElementById('app');
-var share={open:false,fmt:'story',bg:'dark',file:null,busy:false},pwLoginErr='',showPw=false,pwErr='',pwMsg='',team=null,teamDoc=null,regroups={},newGroup='1',canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
+var plan={g1:{},g2:{},week:{g1:0,g2:0}},planDraft={},planGroup='g1',confirmCopy=false,share={open:false,fmt:'story',bg:'dark',file:null,busy:false},pwLoginErr='',showPw=false,pwErr='',pwMsg='',team=null,teamDoc=null,regroups={},newGroup='1',canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
 var ui={view:'athlete',sel:null,filter:'all',pick:null,coachSession:'w1t1',egroup:'1',tgroup:'all',selfSession:null};
 try{var saved=JSON.parse(sessionStorage.getItem('tt-ui')||'null');if(saved){ui.view=saved.view||ui.view;ui.coachSession=saved.coachSession||ui.coachSession;if(saved.sel)ui.sel=saved.sel;}}catch(e){}
 var db=null,fauth=null;
@@ -43,7 +43,7 @@ function loadCoach(user){
   state.athletes=[];data={};
   snap.forEach(function(d){var v=d.data();state.athletes.push({id:d.id,name:v.name||'Iðkandi',order:v.order||0,group:v.group===2?2:1});data[d.id]=v.data||{}});
   sortAthletes();
-  auth={who:'coach',email:user.email};canEdit=true;booting=false;busy='';loginErr='';pushTeam();
+  auth={who:'coach',email:user.email};canEdit=true;booting=false;busy='';loginErr='';pushTeam();loadPlan();
   if(!ui.sel||!byId(ui.sel))ui.sel=state.athletes.length?state.athletes[0].id:null;
   if(!state.athletes.length)ui.view='coach';
   if(location.hash==='#team')ui.view='team';
@@ -61,7 +61,7 @@ function openCode(code,remember){
   if(!d.exists){loginErr='Þessi kóði fannst ekki. Athugaðu hann eða talaðu við þjálfarann.';try{if(storedCode()===code)localStorage.removeItem('tt-code')}catch(e){}render();return}
   var v=d.data();state.athletes=[{id:code,name:v.name||'Iðkandi',group:v.group===2?2:1}];data={};data[code]=v.data||{};
   auth={who:code};canEdit=false;ui.view='athlete';ui.sel=code;loginErr='';team=null;
-  teamDoc=null;db.collection('meta').doc('team').get().then(function(t){if(t.exists){teamDoc=t.data();if(auth&&!canEdit)render()}}).catch(function(){});
+  loadPlan();teamDoc=null;db.collection('meta').doc('team').get().then(function(t){if(t.exists){teamDoc=t.data();if(auth&&!canEdit)render()}}).catch(function(){});
   if(remember){try{localStorage.setItem('tt-code',code)}catch(e){}}
   render();
  }).catch(function(){busy='';booting=false;loginErr='Ekki tókst að tengjast. Athugaðu netsambandið og reyndu aftur.';render()});
@@ -97,7 +97,7 @@ function coachLogin(){
 function logout(){
  if(canEdit&&fauth)fauth.signOut();
  try{localStorage.removeItem('tt-code')}catch(e){}
- auth=null;canEdit=false;state.athletes=[];data={};draft={};loginErr='';team=null;ui.view='athlete';ui.selfSession=null;teamDoc=null;
+ auth=null;canEdit=false;state.athletes=[];data={};draft={};loginErr='';team=null;ui.view='athlete';ui.selfSession=null;teamDoc=null;planDraft={};
  if(hashCode())history.replaceState(null,'',location.pathname);
  render();window.scrollTo(0,0);
 }
@@ -153,7 +153,7 @@ function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.
 function render(){
  if(share.open&&!auth)closeShare();
  var me=auth&&!canEdit?byId(auth.who):null,selfOK=!!(me&&me.group===2);
- var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['coach','Skrá niðurstöður']]:selfOK?[['athlete','Mínar niðurstöður'],['self','Skrá æfingu']]:[];
+ var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['plan','Æfingaplan'],['coach','Skrá niðurstöður']]:selfOK?[['athlete','Mínar niðurstöður'],['self','Skrá æfingu']]:[];
  if(auth&&!canEdit){ui.sel=auth.who;if(ui.view!=='self'||!selfOK)ui.view='athlete'}
  if(canEdit&&ui.view==='self')ui.view='athlete';
  var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="brand"><img class="brand-logo" src="logo-box800-white.png" alt="BOX800" width="533" height="309"><span class="eyebrow">Þjálfunarlota · 5 vikur</span></div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs" role="tablist">';
@@ -165,6 +165,7 @@ function render(){
  if(ui.view==='athlete')html+=athleteView();
  else if(ui.view==='team')html+=teamView();
  else if(ui.view==='self')html+=selfView();
+ else if(ui.view==='plan'&&canEdit)html+=planView();
  else html+=coachView();
  html+='</main>';
  app.innerHTML=html;
@@ -182,6 +183,7 @@ function athleteView(){
  html+='</div>';}
  var t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
  var d1=(t1a!=null&&t1b!=null)?t1b-t1a:null,d2=(c1!=null&&c5!=null)?c5-c1:null;
+ html+=weekCard(a);
  html+='<section class="hero"><div><h2>'+esc(a.name)+'</h2><div class="sub">Próf í viku 1 borin saman við endurpróf í viku 5, auk allra æfinga þar á milli.</div></div><div class="stats">';
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1rpm(x.w1t1)+' rpm'+(t1b!=null?' → mín '+t1b+' · '+t1rpm(x.w5t1)+' rpm':' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
@@ -555,6 +557,49 @@ function coachView(){
 }
 
 function athleteRef(id){return db.collection('athletes').doc(id)}
+// ---------- Æfingaplan ----------
+function loadPlan(){if(!db)return;db.collection('meta').doc('plan').get().then(function(d){if(d.exists){var v=d.data();plan={g1:v.g1||{},g2:v.g2||{},week:v.week||{g1:0,g2:0}};render()}}).catch(function(){})}
+function planItem(group,k){var g=plan['g'+(group===2?2:1)]||{};return g[k]||null}
+function fmtText(t){return esc(t).replace(/\n/g,'<br>')}
+var TEST_TEXT={t1:'Upphitun 5–10 mín rólega.\nAssault-hjól: 1. mín 50 rpm, svo +2 rpm á mínútu upp í 60 rpm, eftir það +1 rpm á mínútu.\nHaltu RPM eins lengi og þú getur. Prófinu lýkur þegar þú dettur 2–3 rpm undir í meira en 5 sek.\nSittu kyrr á hjólinu í 1 mín eftir prófið.',t2:'Upphitun 10 mín.\n10 mín hámarkskaloríur á BikeErg, róðravél og Assault-hjóli.\nSama röð og sama hvíld á milli tækja í viku 1 og viku 5.'};
+function weekCard(a){
+ if(!a)return'';var g='g'+(a.group===2?2:1),w=plan.week&&plan.week[g];if(!w)return'';
+ var items=SESSIONS.filter(function(s){return s.w===Number(w)});
+ var html='',any=false;
+ items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&!it.title)return;any=true;
+  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?'<div>'+fmtText(it.text)+'</div>':'')+'</div></div>'});
+ if(!any)return'';
+ return'<section class="card week-card"><div class="eyebrow-dark">Æfingar vikunnar · Vika '+w+'</div>'+html+'</section>';
+}
+function planVal(g,k,f){var d=planDraft[g]&&planDraft[g][k];if(d&&d[f]!=null)return d[f];var it=(plan[g]||{})[k];return it&&it[f]!=null?it[f]:''}
+function planView(){
+ var g=planGroup,dirty=Object.keys(planDraft).length>0;
+ var html='<section class="card"><h3>Æfingaplan</h3><p class="desc">Skrifaðu æfingarnar fyrir hvorn hóp. Veldu svo hvaða viku á að birta. Iðkendur í hópnum sjá æfingar vikunnar efst á síðunni sinni.</p>';
+ html+='<div class="chips" role="group" aria-label="Hópur"><button class="chip" data-act="plan-group" data-g="g1" aria-pressed="'+(g==='g1')+'">Hópur 1 · á staðnum</button><button class="chip" data-act="plan-group" data-g="g2" aria-pressed="'+(g==='g2')+'">Hópur 2 · fjarþjálfun</button></div>';
+ var wv=planDraft.__week&&planDraft.__week[g]!=null?planDraft.__week[g]:(plan.week&&plan.week[g])||0;
+ html+='<div class="plan-pub"><label class="f" for="plan-week">Birta hjá iðkendum<select id="plan-week" data-g="'+g+'"><option value="0"'+(Number(wv)===0?' selected':'')+'>Ekkert birt</option>';
+ for(var w=1;w<=5;w++)html+='<option value="'+w+'"'+(Number(wv)===w?' selected':'')+'>Vika '+w+'</option>';
+ html+='</select></label>'+(g==='g2'?'<button class="btn ghost sm" data-act="plan-copy">'+(confirmCopy?'Ýttu aftur til að skrifa yfir hóp 2':'Afrita allt úr hópi 1')+'</button>':'')+'</div></section>';
+ for(var wk=1;wk<=5;wk++){
+  var pub=Number(wv)===wk;
+  html+='<section class="card plan-week'+(pub?' is-pub':'')+'"><div class="plan-wh"><h3>Vika '+wk+'</h3>'+(pub?'<span class="pub-pill">Birt</span>':'')+'</div><div class="plan-grid">';
+  SESSIONS.filter(function(s){return s.w===wk}).forEach(function(s){
+   var ph=s.type==='t1'||s.type==='t2'?TEST_TEXT[s.type]:'Dæmi: Upphitun 10 mín. 5 × 4 mín á 85–90% af hámarkspúls, 2 mín hvíld. Niðurlag 5 mín.';
+   html+='<div class="plan-item"><div class="plan-lab"><i class="sw" style="background:'+color(s)+'"></i>'+esc(s.label)+'</div><input id="pl-'+g+'-'+s.k+'-title" data-plan="'+g+'|'+s.k+'|title" placeholder="Titill, t.d. Intervalar 5 × 4 mín" value="'+esc(planVal(g,s.k,'title'))+'"><textarea id="pl-'+g+'-'+s.k+'-text" data-plan="'+g+'|'+s.k+'|text" rows="5" placeholder="'+esc(ph)+'">'+esc(planVal(g,s.k,'text'))+'</textarea>'+(s.type==='t1'||s.type==='t2'?'<button class="linkbtn" data-act="plan-fill" data-k="'+s.k+'" data-t="'+s.type+'">Nota lýsingu prófsins</button>':'')+'</div>'});
+  html+='</div></section>';
+ }
+ html+='<div class="plan-save"><button class="btn" data-act="plan-save"'+(busy?' disabled':'')+'>Vista æfingaplan</button><span class="status">'+(dirty?'Óvistaðar breytingar':'Allt vistað')+'</span></div>';
+ return html;
+}
+function planSetDraft(g,k,f,v){planDraft[g]=planDraft[g]||{};planDraft[g][k]=planDraft[g][k]||{};planDraft[g][k][f]=v;var st=document.querySelector('.plan-save .status');if(st)st.textContent='Óvistaðar breytingar'}
+function planSave(){
+ var next={g1:JSON.parse(JSON.stringify(plan.g1||{})),g2:JSON.parse(JSON.stringify(plan.g2||{})),week:Object.assign({g1:0,g2:0},plan.week||{})};
+ ['g1','g2'].forEach(function(g){var d=planDraft[g]||{};Object.keys(d).forEach(function(k){var it=next[g][k]||{};Object.keys(d[k]).forEach(function(f){var v=String(d[k][f]).trim();if(v)it[f]=v;else delete it[f]});if(Object.keys(it).length)next[g][k]=it;else delete next[g][k]})});
+ if(planDraft.__week)Object.keys(planDraft.__week).forEach(function(g){next.week[g]=Number(planDraft.__week[g])||0});
+ busy='save';render();
+ db.collection('meta').doc('plan').set(next).then(function(){plan=next;planDraft={};busy='';render();toast('Æfingaplan vistað.')}).catch(fail);
+}
+
 function minFor(rpm){return rpm<=60?Math.floor((rpm-50)/2)+1:rpm-54}
 function selfFields(s){
  if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Sittu kyrr á hjólinu.'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
@@ -571,6 +616,7 @@ function selfView(){
  html+='<label class="f" for="me-session">Æfing<select id="me-session">';
  SESSIONS.forEach(function(q){html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(x[q.k]?' ✓':'')+'</option>'});
  html+='</select></label>';
+ var pw=planItem(a.group,s.k);if(pw&&pw.text)html+='<div class="plan-show"><b>'+esc(pw.title||s.label)+'</b><div>'+fmtText(pw.text)+'</div></div>';
  if(s.type==='t1')html+='<p class="hint">Próf 1: 1. mín 50 rpm, svo +2 á mínútu upp í 60 rpm, eftir það +1 á mínútu. Skráðu síðasta RPM sem þú kláraðir heila mínútu á.</p>';
  if(s.type==='t2')html+='<p class="hint">Skráðu þau tæki sem þú hafðir aðgang að. Hin má skilja eftir auð.</p>';
  html+='<div class="self-grid">';
@@ -687,6 +733,10 @@ app.addEventListener('click',function(e){
  else if(act==='show-pw'){showPw=true;loginErr='';render();var pe=document.getElementById('pw-pass');if(pe)pe.focus()}
  else if(act==='set-pw')setPassword();
  else if(act==='share-open'){share.open=true;openShareModal()}
+ else if(act==='plan-group'){planGroup=el.getAttribute('data-g');confirmCopy=false;render()}
+ else if(act==='plan-save')planSave();
+ else if(act==='plan-fill'){var k=el.getAttribute('data-k'),t=el.getAttribute('data-t'),ta=document.getElementById('pl-'+planGroup+'-'+k+'-text');if(ta){ta.value=TEST_TEXT[t];planSetDraft(planGroup,k,'text',TEST_TEXT[t])}var ti=document.getElementById('pl-'+planGroup+'-'+k+'-title');if(ti&&!ti.value){ti.value=t==='t1'?'Próf 1 · Hámarkspúlspróf':'Próf 2 · 3 × 10 mín hámarkskaloríur';planSetDraft(planGroup,k,'title',ti.value)}}
+ else if(act==='plan-copy'){if(!confirmCopy){confirmCopy=true;render()}else{confirmCopy=false;SESSIONS.forEach(function(s){['title','text'].forEach(function(f){planSetDraft('g2',s.k,f,planVal('g1',s.k,f))})});render();toast('Afritað. Smelltu á Vista æfingaplan.')}}
  else if(act==='add-athletes')addAthletes();
  else if(act==='save-names')saveNames();
  else if(act==='save-title')saveTitle();
@@ -718,6 +768,7 @@ app.addEventListener('input',function(e){var t=e.target;
  else if(t.dataset.rename){renames[t.dataset.rename]=t.value}
  else if(t.id==='new-names'){newNames=t.value}
  else if(t.id==='n-project'){renames.__title=t.value}
+ else if(t.dataset.plan){var pp=t.dataset.plan.split('|');planSetDraft(pp[0],pp[1],pp[2],t.value)}
  else if(t.id==='me-rpm'){var o=document.getElementById('me-t1'),r=parseInt(t.value,10);if(o)o.textContent=r>=50&&r<=90?'= '+minFor(r)+' mínútur':''}
  else if(t.id==='login-code'){var pos=t.value.length;var nv=normCode(t.value);if(nv.replace('-','').length===8&&nv!==t.value)t.value=nv}
 });
@@ -725,6 +776,7 @@ app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preve
 app.addEventListener('change',function(e){var t=e.target;
  if(t.id==='c-session'){ui.coachSession=t.value;persistUi();render()}
  else if(t.id==='c-group'){ui.egroup=t.value;render()}
+ else if(t.id==='plan-week'){planDraft.__week=planDraft.__week||{};planDraft.__week[t.dataset.g]=t.value;var st=document.querySelector('.plan-save .status');if(st)st.textContent='Óvistaðar breytingar'}
  else if(t.id==='c-zones'){ui.zones=t.checked;try{localStorage.setItem('tt-zones',t.checked?'1':'0')}catch(e){}render()}
  else if(t.id==='me-session'){ui.selfSession=t.value;render()}
  else if(t.id==='new-group'){newGroup=t.value}

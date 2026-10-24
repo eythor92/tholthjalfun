@@ -226,3 +226,23 @@ table.entry.codes select{min-width:180px}
 #share-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9fb0bf;font-weight:600}
 .share-box .btn{width:100%}
 .zone-toggle{width:100%;order:3;margin-top:2px}
+.plan-pub{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:14px}
+.plan-week.is-pub{border-color:var(--pulse);box-shadow:0 0 0 1px var(--pulse)}
+.plan-wh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pub-pill{background:var(--pulse);color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 10px}
+.plan-grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:760px){.plan-grid{grid-template-columns:1fr 1fr}}
+.plan-item{display:grid;gap:8px;min-width:0}
+.plan-lab{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px}
+.plan-item input,.plan-item textarea{width:100%;font:500 15px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.plan-item textarea{resize:vertical;line-height:1.45}
+.plan-item .linkbtn{justify-self:start;padding:0}
+.plan-save{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:5}
+.week-card{display:grid;gap:12px}
+.eyebrow-dark{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--pulse)}
+.wk-item{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:start}
+.wk-tag{color:#fff;font-weight:700;font-size:13px;border-radius:8px;padding:6px 0;text-align:center}
+.wk-body b{display:block;font-size:16px;margin-bottom:3px}
+.wk-body div{font-size:14.5px;line-height:1.5;color:var(--ink)}
+.plan-show{background:var(--soft);border-radius:10px;padding:10px 12px;margin:4px 0 10px;font-size:14.5px;line-height:1.5}
+.plan-show b{display:block;margin-bottom:3px}
