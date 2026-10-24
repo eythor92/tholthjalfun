@@ -570,11 +570,45 @@ function weekCard(a){
  if(!a)return'';var g='g'+gid(a.group),w=plan.week&&plan.week[g];if(!w)return'';
  var items=SESSIONS.filter(function(s){return s.w===Number(w)});
  var html='',any=false;
- items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&!it.title)return;any=true;
-  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?'<div>'+fmtText(it.text)+'</div>':'')+'</div></div>'});
+ items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&!it.title&&!it.img)return;any=true;
+  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?'<div>'+fmtText(it.text)+'</div>':'')+imgTag(g,s.k,it.img,'wk-img')+'</div></div>'});
  if(!any)return'';
  return'<section class="card week-card"><div class="eyebrow-dark">Æfingar vikunnar · Vika '+w+'</div>'+html+'</section>';
 }
+var IMG={},imgBusy=null;
+function imgKey(g,k){return'img-'+g+'-'+k}
+function imgTag(g,k,ver,cls){
+ if(!ver)return'';var key=imgKey(g,k),c=IMG[key];
+ if(!c||c.v!==ver){if(!c||!c.loading){IMG[key]={v:ver,loading:true};db.collection('meta').doc(key).get().then(function(d){IMG[key]={v:ver,src:d.exists?d.data().data:null};render()}).catch(function(){IMG[key]={v:ver,src:null}})}return'<div class="'+cls+' img-wait">Hleð mynd…</div>'}
+ if(!c.src)return'';
+ return'<button class="'+cls+'" data-act="img-open" data-key="'+key+'" aria-label="Opna mynd"><img src="'+c.src+'" alt="Mynd með æfingunni"></button>';
+}
+function shrinkImage(file){return new Promise(function(res,rej){
+ var url=URL.createObjectURL(file),im=new Image();
+ im.onload=function(){URL.revokeObjectURL(url);var max=1600,w=im.naturalWidth,h=im.naturalHeight,sc=Math.min(1,max/Math.max(w,h));
+  var cv=document.createElement('canvas');cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);var c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);c.drawImage(im,0,0,cv.width,cv.height);
+  var q=.82,d=cv.toDataURL('image/jpeg',q);
+  while(d.length>900000&&q>.35){q-=.1;d=cv.toDataURL('image/jpeg',q)}
+  if(d.length>900000){var cv2=document.createElement('canvas');cv2.width=Math.round(cv.width*.7);cv2.height=Math.round(cv.height*.7);cv2.getContext('2d').drawImage(cv,0,0,cv2.width,cv2.height);d=cv2.toDataURL('image/jpeg',.7)}
+  res(d)};
+ im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('img'))};im.src=url})}
+function uploadPlanImage(g,k,file){
+ if(!file)return;if(!/^image\//.test(file.type)&&!/\.(heic|heif)$/i.test(file.name)){toast('Veldu myndaskrá (JPG eða PNG).');return}
+ imgBusy=g+k;render();
+ shrinkImage(file).then(function(d){
+  var ver=Date.now(),key=imgKey(g,k);
+  return db.collection('meta').doc(key).set({data:d,updated:ver}).then(function(){
+   var upd={};upd[g]={};upd[g][k]={img:ver};
+   return db.collection('meta').doc('plan').set(upd,{merge:true})}).then(function(){
+   plan[g]=plan[g]||{};plan[g][k]=plan[g][k]||{};plan[g][k].img=ver;IMG[key]={v:ver,src:d};imgBusy=null;render();toast('Mynd vistuð.')})
+ }).catch(function(e){imgBusy=null;render();toast(e&&e.message==='img'?'Gat ekki lesið myndina. Prófaðu JPG eða PNG.':'Ekki tókst að vista myndina.')});
+}
+function removePlanImage(g,k){
+ var key=imgKey(g,k),FV=firebase.firestore.FieldValue,upd={};upd[g+'.'+k+'.img']=FV.delete();
+ imgBusy=g+k;render();
+ db.collection('meta').doc('plan').update(upd).then(function(){return db.collection('meta').doc(key).delete()}).then(function(){if(plan[g]&&plan[g][k])delete plan[g][k].img;delete IMG[key];imgBusy=null;render();toast('Mynd fjarlægð.')}).catch(fail);
+}
+function openLightbox(key){var c=IMG[key];if(!c||!c.src)return;var m=document.createElement('div');m.className='lightbox';m.innerHTML='<img src="'+c.src+'" alt="Mynd"><p>Haltu fingri á myndinni til að vista hana.</p><button class="share-x" aria-label="Loka">✕</button>';m.addEventListener('click',function(){m.remove()});document.body.appendChild(m)}
 function planVal(g,k,f){var d=planDraft[g]&&planDraft[g][k];if(d&&d[f]!=null)return d[f];var it=(plan[g]||{})[k];return it&&it[f]!=null?it[f]:''}
 function planView(){
  var g=planGroup,dirty=Object.keys(planDraft).length>0;
@@ -590,11 +624,17 @@ function planView(){
   html+='<section class="card plan-week'+(pub?' is-pub':'')+'"><div class="plan-wh"><h3>Vika '+wk+'</h3>'+(pub?'<span class="pub-pill">Birt</span>':'')+'</div><div class="plan-grid">';
   SESSIONS.filter(function(s){return s.w===wk}).forEach(function(s){
    var ph=s.type==='t1'||s.type==='t2'?TEST_TEXT[s.type]:'Dæmi: Upphitun 10 mín. 5 × 4 mín á 85–90% af hámarkspúls, 2 mín hvíld. Niðurlag 5 mín.';
-   html+='<div class="plan-item"><div class="plan-lab"><i class="sw" style="background:'+color(s)+'"></i>'+esc(s.label)+'</div><input id="pl-'+g+'-'+s.k+'-title" data-plan="'+g+'|'+s.k+'|title" placeholder="Titill, t.d. Intervalar 5 × 4 mín" value="'+esc(planVal(g,s.k,'title'))+'"><textarea id="pl-'+g+'-'+s.k+'-text" data-plan="'+g+'|'+s.k+'|text" rows="5" placeholder="'+esc(ph)+'">'+esc(planVal(g,s.k,'text'))+'</textarea>'+(s.type==='t1'||s.type==='t2'?'<button class="linkbtn" data-act="plan-fill" data-k="'+s.k+'" data-t="'+s.type+'">Nota lýsingu prófsins</button>':'')+'</div>'});
+   html+='<div class="plan-item"><div class="plan-lab"><i class="sw" style="background:'+color(s)+'"></i>'+esc(s.label)+'</div><input id="pl-'+g+'-'+s.k+'-title" data-plan="'+g+'|'+s.k+'|title" placeholder="Titill, t.d. Intervalar 5 × 4 mín" value="'+esc(planVal(g,s.k,'title'))+'"><textarea id="pl-'+g+'-'+s.k+'-text" data-plan="'+g+'|'+s.k+'|text" rows="5" placeholder="'+esc(ph)+'">'+esc(planVal(g,s.k,'text'))+'</textarea>'+(s.type==='t1'||s.type==='t2'?'<button class="linkbtn" data-act="plan-fill" data-k="'+s.k+'" data-t="'+s.type+'">Nota lýsingu prófsins</button>':'')+planImgCtl(g,s.k)+'</div>'});
   html+='</div></section>';
  }
  html+='<div class="plan-save"><button class="btn" data-act="plan-save"'+(busy?' disabled':'')+'>Vista æfingaplan</button><span class="status">'+(dirty?'Óvistaðar breytingar':'Allt vistað')+'</span></div>';
  return html;
+}
+function planImgCtl(g,k){
+ var it=(plan[g]||{})[k]||{},busyHere=imgBusy===g+k;
+ if(busyHere)return'<div class="img-ctl"><span class="status">Vista mynd…</span></div>';
+ if(it.img)return'<div class="img-ctl has">'+imgTag(g,k,it.img,'plan-thumb')+'<button class="linkbtn danger-link" data-act="img-remove" data-g="'+g+'" data-k="'+k+'">Fjarlægja mynd</button></div>';
+ return'<div class="img-ctl"><label class="img-add" for="img-'+g+'-'+k+'"><input id="img-'+g+'-'+k+'" type="file" accept="image/*" data-img="'+g+'|'+k+'" hidden>+ Bæta við mynd'+(/t\d$/.test(k)?' (t.d. skorblað)':'')+'</label></div>';
 }
 function planSetDraft(g,k,f,v){planDraft[g]=planDraft[g]||{};planDraft[g][k]=planDraft[g][k]||{};planDraft[g][k][f]=v;var st=document.querySelector('.plan-save .status');if(st)st.textContent='Óvistaðar breytingar'}
 function planSave(){
@@ -621,7 +661,7 @@ function selfView(){
  html+='<label class="f" for="me-session">Æfing<select id="me-session">';
  SESSIONS.forEach(function(q){html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(x[q.k]?' ✓':'')+'</option>'});
  html+='</select></label>';
- var pw=planItem(a.group,s.k);if(pw&&pw.text)html+='<div class="plan-show"><b>'+esc(pw.title||s.label)+'</b><div>'+fmtText(pw.text)+'</div></div>';
+ var pw=planItem(a.group,s.k);if(pw&&(pw.text||pw.img))html+='<div class="plan-show"><b>'+esc(pw.title||s.label)+'</b>'+(pw.text?'<div>'+fmtText(pw.text)+'</div>':'')+imgTag('g'+gid(a.group),s.k,pw.img,'wk-img')+'</div>';
  if(s.type==='t1')html+='<p class="hint">Próf 1: 1. mín 50 rpm, svo +2 á mínútu upp í 60 rpm, eftir það +1 á mínútu. Skráðu síðasta RPM sem þú kláraðir heila mínútu á.</p>';
  if(s.type==='t2')html+='<p class="hint">Skráðu þau tæki sem þú hafðir aðgang að. Hin má skilja eftir auð.</p>';
  html+='<div class="self-grid">';
@@ -740,6 +780,8 @@ app.addEventListener('click',function(e){
  else if(act==='share-open'){share.open=true;openShareModal()}
  else if(act==='plan-group'){planGroup=el.getAttribute('data-g');confirmCopy=false;render()}
  else if(act==='plan-save')planSave();
+ else if(act==='img-open')openLightbox(el.getAttribute('data-key'));
+ else if(act==='img-remove'){var rk=el.getAttribute('data-g')+'|'+el.getAttribute('data-k');if(confirmDel!=='img'+rk){confirmDel='img'+rk;el.textContent='Ýttu aftur til að fjarlægja';return}confirmDel=null;removePlanImage(el.getAttribute('data-g'),el.getAttribute('data-k'))}
  else if(act==='plan-fill'){var k=el.getAttribute('data-k'),t=el.getAttribute('data-t'),ta=document.getElementById('pl-'+planGroup+'-'+k+'-text');if(ta){ta.value=TEST_TEXT[t];planSetDraft(planGroup,k,'text',TEST_TEXT[t])}var ti=document.getElementById('pl-'+planGroup+'-'+k+'-title');if(ti&&!ti.value){ti.value=t==='t1'?'Próf 1 · Hámarkspúlspróf':'Próf 2 · 3 × 10 mín hámarkskaloríur';planSetDraft(planGroup,k,'title',ti.value)}}
  else if(act==='plan-copy'){if(!confirmCopy){confirmCopy=true;render()}else{confirmCopy=false;SESSIONS.forEach(function(s){['title','text'].forEach(function(f){planSetDraft(planGroup,s.k,f,planVal(planFrom,s.k,f))})});render();toast('Afritað úr '+groupName(Number(planFrom.slice(1)))+'. Smelltu á Vista æfingaplan.')}}
  else if(act==='add-athletes')addAthletes();
@@ -752,7 +794,7 @@ app.addEventListener('click',function(e){
  else if(act==='tgroup'){ui.tgroup=el.getAttribute('data-g');render()}
  else if(act==='self-save')selfSave(false);
  else if(act==='self-clear'){if(confirmDel==='self')selfSave(true);else{confirmDel='self';render();return}}
- if(act!=='remove'&&act!=='self-clear'&&confirmDel){confirmDel=null;render()}
+ if(act!=='remove'&&act!=='self-clear'&&act!=='img-remove'&&confirmDel){confirmDel=null;render()}
 });
 app.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('brow')){e.preventDefault();e.target.click()}});
 app.addEventListener('input',function(e){var t=e.target;
@@ -779,6 +821,7 @@ app.addEventListener('input',function(e){var t=e.target;
 });
 app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();tryLogin()}else if(e.target.id==='pw-form'){e.preventDefault();pwLogin()}});
 app.addEventListener('change',function(e){var t=e.target;
+ if(t.dataset&&t.dataset.img){var ip=t.dataset.img.split('|');uploadPlanImage(ip[0],ip[1],t.files&&t.files[0]);return}
  if(t.id==='c-session'){ui.coachSession=t.value;persistUi();render()}
  else if(t.id==='c-group'){ui.egroup=t.value;render()}
  else if(t.id==='plan-week'){planDraft.__week=planDraft.__week||{};planDraft.__week[t.dataset.g]=t.value;var st=document.querySelector('.plan-save .status');if(st)st.textContent='Óvistaðar breytingar'}

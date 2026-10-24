@@ -72,6 +72,7 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 - Fyrir prófin er takkinn **Nota lýsingu prófsins** sem fyllir út framkvæmdina.
 - **Afrita æfingar úr:** veldu annan hóp og smelltu tvisvar á **Afrita** til að fá æfingarnar hans. Breyttu svo því sem er öðruvísi og vistaðu.
 - Fjariðkendur sjá líka lýsinguna þegar þeir velja æfingu í **Skrá æfingu**.
+- **Myndir:** Smelltu á **+ Bæta við mynd** undir æfingu, t.d. til að setja inn skorblað fyrir prófin. Myndin er minnkuð sjálfkrafa og vistast strax. Iðkendur sjá hana með æfingum vikunnar og geta smellt á hana til að sjá hana stóra.
 - Mundu að skipta um viku á mánudögum.
 
 ## Eftir hverja æfingu
