@@ -311,3 +311,4 @@ table.entry.codes select{min-width:180px}
 .guide .g-h span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .guide ul{margin:0;padding-left:18px}
 .guide li{margin:5px 0;line-height:1.45;font-size:15px}
+.hrtab .hr-rows,.hrtab .hr-row.z-two,.hrtab .hr-form{max-width:520px}

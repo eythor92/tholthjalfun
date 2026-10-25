@@ -165,7 +165,7 @@ function fmtMin(n){return(Math.round(n*10)/10)+' mín'}
 function total(s){if(!s)return null;if(s.parts&&s.parts.length){var pt=0,pa=false;s.parts.forEach(function(q){if(q&&q.c!=null){pa=true;pt+=q.c}});return pa?pt:null}var any=false,t=0;MACHINES.forEach(function(m){if(s[m[0]]!=null){any=true;t+=s[m[0]]}});return any?t:null}
 function sign(n,fmt){if(n==null)return'—';var str=fmt?fmt(Math.abs(n)):Math.abs(n);return(n>0?'+':n<0?'−':'±')+str}
 function cls(n,goodUp){if(!n)return'';return(n>0)===(goodUp!==false)?'up':'down'}
-function hrMax(x){var m=x&&x.hrmax||0;SESSIONS.forEach(function(s){if(x[s.k]&&x[s.k].max>m)m=x[s.k].max});return m||null}
+function hrMax(x){if(x&&x.hrmax)return x.hrmax;var m=0;SESSIONS.forEach(function(s){if(x[s.k]&&x[s.k].max>m)m=x[s.k].max});return m||null}
 function testMax(x){var m=0;SESSIONS.forEach(function(s){if(x[s.k]&&x[s.k].max>m)m=x[s.k].max});return m||null}
 function countDone(x){return SESSIONS.filter(function(s){return x[s.k]}).length}
 function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.view,coachSession:ui.coachSession,sel:ui.sel}))}catch(e){}}
@@ -217,11 +217,11 @@ function hrCard(x,a){
  var form=mine?'<div class="hr-form"><label class="f" for="hr-in">'+(own?'Hámarkspúlsinn þinn':'Hver er hámarkspúlsinn þinn núna?')+'<span class="fhint">Hæsti púls sem þú veist um, t.d. úr úrinu eða fyrra prófi. Má breyta hvenær sem er.</span><input id="hr-in" inputmode="numeric" maxlength="3" placeholder="t.d. 188" value="'+(own||'')+'"></label><button class="btn" data-act="hr-save"'+(saving?' disabled':'')+'>Vista</button></div>':'';
  if(!hm)return html+'<p class="desc">Hér sérðu hvaða púls (slög á mínútu) passar við hverja prósentu í æfingunum. Skráðu hámarkspúlsinn þinn hér fyrir neðan til að fá töfluna.</p>'+form+'</section>';
  var bands=[[60,65,'z-easy'],[65,70,'z-easy'],[70,75,'z-mid'],[75,80,'z-mid'],[80,85,'z-tempo'],[85,90,'z-tempo'],[90,null,'z-hot']];
- var src=tm&&tm>=(own||0)?'hæsta púls sem hefur verið skráður á prófi eða æfingu':'hámarkspúlsinn sem þú skráðir';
+ var src=own?'hámarkspúlsinn sem þú skráðir':'hæsta púls sem hefur verið skráður á prófi eða æfingu';
  html+='<p class="desc">Miðað við '+src+', <b class="num">'+hm+' bpm</b>. Notaðu töfluna þegar úrið sýnir bara slög en ekki %.</p><div class="hr-rows">';
  bands.forEach(function(b){var lo=Math.round(hm*b[0]/100),hi=b[1]?Math.round(hm*b[1]/100):null;
   html+='<div class="hr-row '+b[2]+'"><span class="hr-p num">'+b[0]+(b[1]?'–'+b[1]+'%':'%+')+'</span><span class="hr-b num">'+(hi?lo+'–'+hi:lo+'+')+' <small>bpm</small></span></div>'});
- html+='</div><div class="hr-row z-two"><span class="hr-p">Zone 2 <small>· 60–70%</small></span><span class="hr-b num">'+Math.round(hm*.6)+'–'+Math.round(hm*.7)+' <small>bpm</small></span></div><p class="trend">Ábending: taktu skjáskot af töflunni og hafðu hana við höndina á æfingu. Ef þú nærð hærri púlsi á prófi eða æfingu uppfærist taflan sjálfkrafa.</p>';
+ html+='</div><div class="hr-row z-two"><span class="hr-p">Zone 2 <small>· 60–70%</small></span><span class="hr-b num">'+Math.round(hm*.6)+'–'+Math.round(hm*.7)+' <small>bpm</small></span></div><p class="trend">Ábending: taktu skjáskot af töflunni og hafðu hana við höndina á æfingu.'+(own&&tm&&tm>own?' Þú hefur náð <b class="num">'+tm+' bpm</b> á prófi eða æfingu. Ef það er réttari tala geturðu breytt hámarkspúlsinum hér fyrir neðan.':'')+'</p>';
  if(mine)html+='<details class="hr-edit"'+(own?'':' open')+'><summary>'+(own?'Breyta hámarkspúlsinum þínum ('+own+')':'Skrá hámarkspúlsinn þinn')+'</summary>'+form+'</details>';
  return html+'</section>';
 }
