@@ -19,7 +19,14 @@ service cloud.firestore {
       allow update: if isCoach()
         || (resource.data.group in [2, 4]
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'updated'])
-            && request.resource.data.data is map);
+            && request.resource.data.data is map)
+        // Allir iðkendur mega skrá hámarkspúlsinn sinn (data.hrmax), en ekkert annað.
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'updated'])
+            && request.resource.data.data.diff(resource.data.data).affectedKeys().hasOnly(['hrmax'])
+            && (!('hrmax' in request.resource.data.data)
+                || (request.resource.data.data.hrmax is int
+                    && request.resource.data.data.hrmax >= 120
+                    && request.resource.data.data.hrmax <= 230)));
     }
 
     // Titill verkefnisins og meðaltöl hópanna.

@@ -59,6 +59,10 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 - Í **Skrá niðurstöður** velurðu hópinn efst. Þú getur líka leiðrétt tölur fjariðkenda þar.
 - Hver iðkandi ber sig saman við meðaltal **síns hóps**. Meðaltal hóps 2 uppfærist þegar þú opnar þjálfarasíðuna, svo gott er að kíkja inn einu sinni til tvisvar í viku.
 - Iðkandi í fjarþjálfun getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
+- **Tæki í fjarþjálfun:** Æfingarnar má gera á 1, 2 eða 3 þoltækjum að eigin vali. Próf 1 er alltaf á Assault Bike. Í Prófi 2 velur hann tæki fyrir hvern af þremur hlutunum (BikeErg, RowErg, Assault Bike, SkiErg, hlaupabretti eða annað) og skráir kaloríurnar. Sama tæki og sama röð í viku 1 og viku 5.
+- **Samanburður í fjarhópum:** Þar sem tækin eru misjöfn ber „Þú og hópurinn“ saman **bætingu í %** í Prófi 1 og Prófi 2, ekki mínútur eða kaloríur.
+- **Leiðbeiningar fyrir fjarhópa:** Á síðu fjariðkenda er spjaldið **Svona tekur þú æfingarnar**. Þar er sagt frá þriðjudögum (hátt tempó, öndun og endurheimt í hvíldinni), fimmtudögum (jafn hraði, neföndun, hraðar á sama púlsi) og heimaæfingunni (zone 2, með þeirra eigin bpm).
+- **Heimaæfing (valfrjálst):** Fjariðkendur geta líka skráð rólegu heimaæfinguna (zone 2, 60–70%) í vikum 1–4 undir **Skrá æfingu** (mínútur, og valfrjálst meðalpúls, kaloríur og hvað þeir gerðu). Hún birtist í spjaldinu **Heimaæfingar** á síðu iðkandans en telst ekki með í æfingunum 10 eða meðaltali hópsins.
 
 ## Innskráning þjálfara í síma og iPad
 Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá notarðu lykilorð:
@@ -69,6 +73,8 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 ## Æfingaplan
 - Flipinn **Æfingaplan** (aðeins fyrir þjálfara) geymir 10 æfingar fyrir hvorn hóp: titil og lýsingu fyrir hverja æfingu, vika 1–5.
 - **Birta hjá iðkendum:** veldu vikuna sem er í gangi og smelltu á **Vista æfingaplan**. Iðkendur í hópnum sjá báðar æfingar vikunnar efst á síðunni sinni.
+- **Snið:** Skrifaðu æfingar eins og á töfluna, ein lína í senn: `3 mín @ 60–65%`. Fyrirsagnir með hástöfum (UPPHITUN, AÐALÆFING …). Línur með 90+ verða rauðar, línur með hvíld gráar, og lína sem byrjar á `~` verður athugasemd.
+- **Setja inn BOX800 planið:** fyllir allar 10 æfingarnar í hópnum sem er valinn (hópar 2 og 4 fá útgáfu fyrir fjarþjálfun). Smelltu tvisvar og svo á **Vista æfingaplan**.
 - Fyrir prófin er takkinn **Nota lýsingu prófsins** sem fyllir út framkvæmdina.
 - **Afrita æfingar úr:** veldu annan hóp og smelltu tvisvar á **Afrita** til að fá æfingarnar hans. Breyttu svo því sem er öðruvísi og vistaðu.
 - Fjariðkendur sjá líka lýsinguna þegar þeir velja æfingu í **Skrá æfingu**.
@@ -83,9 +89,10 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 Hvað er skráð:
 - Úr Polar skráir þú alltaf bpm (ekki %): HR AVG í Meðalpúls, HR MAX í Hámarkspúls og CALORIES í Kaloríur.
 - **Tími í svæðum** er í sömu röð og hjá Polar (svæði 5 fyrst). Skrifaðu tímann eins og Polar sýnir hann, t.d. `00:22:16` eða `22:16`. Það má sleppa honum.
-- Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar. Í reitinn **Púls 1 mín** skráirðu púlsinn nákvæmlega 60 sekúndum eftir að iðkandinn hætti (sitjandi kyrr á hjólinu). Síðan reiknar út **endurheimt**: hámarkspúls mínus púls eftir 1 mín.
+- Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar. Í reitinn **Púls 1 mín** skráirðu púlsinn nákvæmlega 60 sekúndum eftir að iðkandinn hætti (iðkandinn hvílir þessa mínútu). Síðan reiknar út **endurheimt**: hámarkspúls mínus púls eftir 1 mín.
 
 ## Gott að vita
+- **Púlstaflan:** Efst á síðu hvers iðkanda er tafla sem sýnir hvaða púls (bpm) passar við 60–65%, 65–70% … upp í 90%+, miðað við hámarkspúls hans. Gott fyrir þá sem eru með úr sem sýnir bara slög. Iðkendur í öllum hópum geta skráð núverandi hámarkspúls sinn í töflunni, svo hún virkar strax frá fyrsta degi. Ef hærri púls er skráður á prófi eða æfingu er hann notaður. Til að þetta virki þarf að líma nýju `firestore.rules` inn í Firebase (Firestore → Rules → Publish).
 - **Meðaltal hópsins:** Iðkendur sjá spjaldið „Þú og hópurinn“ og strikaða línu fyrir meðalpúls hópsins í grafinu. Meðaltalið uppfærist í hvert sinn sem þú vistar. Það birtist aðeins þegar a.m.k. 3 iðkendur eru með tölur, svo enginn geti reiknað út tölur annarra.
 - **Mynd fyrir Instagram:** Á síðu hvers iðkanda er takkinn **Búa til mynd**. Þar velur maður Story (9:16) eða ferning (1:1), og dökkan eða gegnsæjan bakgrunn. Í síma fer myndin beint í myndasafnið eða á Instagram. Þú getur líka búið hana til fyrir iðkendur þegar þú skoðar síðuna þeirra sem þjálfari.
 - **Kóðar:** Ef kóði fer á flakk smellirðu á **Nýr kóði**. Gamli kóðinn hættir þá að virka og öll gögn haldast. Sendu iðkandanum nýja hlekkinn.
