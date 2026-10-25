@@ -319,3 +319,7 @@ table.entry.codes select{min-width:180px}
 .gtab[aria-selected="true"] small{color:inherit;opacity:.7}
 .gtab.remote:not([aria-selected="true"]){border-style:dashed}
 .gtab-name{font-size:13px;color:var(--muted);margin:0 0 10px;font-weight:600}
+.install{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--pulse);border-radius:14px;padding:12px 14px;margin:0 0 14px}
+.install > div > b{display:block;margin-bottom:2px}
+.install span b{color:var(--ink)}
+.install span{font-size:14px;color:var(--muted);line-height:1.45}

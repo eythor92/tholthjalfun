@@ -212,13 +212,21 @@ function athleteView(){
  if(gid(a.group)!==ag){if(gl.length){a=gl[0];x=data[a.id]||{};ui.sel=a.id;team=teamFor(a)}else return html;}}
  var t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
  var d1=(t1a!=null&&t1b!=null)?t1b-t1a:null,d2=(c1!=null&&c5!=null)?c5-c1:null;
- html+=weekCard(a)+hrCard(x,a)+guideCard(x,a);
+ html+=installCard()+weekCard(a)+hrCard(x,a)+guideCard(x,a);
  html+='<section class="hero"><div><h2>'+esc(a.name)+'</h2><div class="sub">Próf í viku 1 borin saman við endurpróf í viku 5, auk allra æfinga þar á milli.</div></div><div class="stats">';
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1lab(x.w1t1)+(t1b!=null?' → mín '+t1b+' · '+t1lab(x.w5t1):' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Æfingar kláraðar',countDone(x)+'<span style="font-size:.55em;color:var(--muted)"> / 10</span>','Próf og æfingar');
  html+='</div></section>'+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x)+homeCard(x);
  return html;
+}
+function installCard(){
+ var st=false;try{st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){}
+ if(st||canEdit)return'';var dis=false;try{dis=localStorage.getItem('tt-install')==='0'}catch(e){}if(dis)return'';
+ var ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document),android=/Android/.test(ua);
+ if(!ios&&!android)return'';
+ var how=ios?(/CriOS|FxiOS|EdgiOS/.test(ua)?'Opnaðu síðuna í <b>Safari</b>, ýttu á <b>Deila</b> táknið (ferningur með ör upp) og veldu <b>Bæta á heimaskjá</b>.':'Ýttu á <b>Deila</b> táknið neðst (ferningur með ör upp) og veldu <b>Bæta á heimaskjá</b> (Add to Home Screen).'):'Ýttu á <b>⋮</b> efst í Chrome og veldu <b>Setja upp forrit</b> eða <b>Bæta á heimaskjá</b>.';
+ return'<section class="install"><div><b>Settu Þolþjálfun á heimaskjáinn</b><span>'+how+' Þá opnast síðan eins og app.</span></div><button class="btn ghost sm" data-act="install-x" aria-label="Loka">Loka</button></section>';
 }
 function hrCard(x,a){
  var hm=hrMax(x),tm=testMax(x),own=x.hrmax||null,mine=canEdit||(auth&&a&&auth.who===a.id);
@@ -880,6 +888,7 @@ function save(){
 app.addEventListener('click',function(e){
  var el=e.target.closest('[data-act]');if(!el)return;var act=el.getAttribute('data-act');
  if(act==='view'){ui.view=el.getAttribute('data-v');ui.pick=null;persistUi();render();window.scrollTo(0,0)}
+ else if(act==='install-x'){try{localStorage.setItem('tt-install','0')}catch(e){}render()}
  else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}

@@ -100,3 +100,13 @@ Hvað er skráð:
 - **Öryggi:** Iðkendur geta bara sótt sitt eigið skjal með kóðanum og geta hvorki séð lista yfir aðra né breytt neinu. Aðeins netfangið í reglunum getur skráð og breytt.
 - **Kostnaður:** Þetta er langt undir ókeypis mörkum Firebase (Spark-áskrift).
 - **Breytingar á síðunni sjálfri** (nýr `app.js` eða `style.css`) fara áfram í gegnum VS Code og GitHub eins og áður.
+
+## Sem app í símanum
+Síðan er vefapp (PWA). Það þarf ekki App Store eða Google Play.
+- **iPhone:** opna síðuna í **Safari** (með persónulega hlekknum), ýta á **Deila** og velja **Bæta á heimaskjá**.
+- **Android:** opna síðuna í **Chrome**, ýta á **⋮** og velja **Setja upp forrit** eða **Bæta á heimaskjá**.
+- Þá kemur BOX800 táknið á heimaskjáinn og síðan opnast í fullum skjá eins og app.
+- Iðkendur sjá stutta leiðbeiningu efst á síðunni í símanum þar til þeir setja appið upp eða loka henni.
+- Á iPhone geymir appið innskráningu sér, svo iðkandi gæti þurft að slá inn kóðann sinn einu sinni í appinu.
+- Uppfærslur koma sjálfkrafa þegar þú gerir Commit og Sync, eins og áður.
+- Skrár fyrir appið: `manifest.webmanifest`, `icon-192.png`, `icon-512.png` og `icon-maskable-512.png`.
