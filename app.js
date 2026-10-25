@@ -29,9 +29,11 @@ var data={};
 var app=document.getElementById('app');
 var plan={g1:{},g2:{},g3:{},g4:{},week:{}},planFrom='g1',planDraft={},planGroup='g1',confirmCopy=false,share={open:false,fmt:'story',bg:'dark',file:null,busy:false},pwLoginErr='',showPw=false,pwErr='',pwMsg='',team=null,teamDoc=null,regroups={},newGroup='1',canEdit=false,saving=false,draft={},auth=null,loginErr='',booting=true,setupErr='',busy='',confirmDel=null,newNames='',renames={},copied=null;
 var ui={view:'athlete',sel:null,filter:'all',pick:null,coachSession:'w1t1',egroup:'1',tgroup:'all',selfSession:null};
-try{var saved=JSON.parse(sessionStorage.getItem('tt-ui')||'null');if(saved){ui.view=saved.view||ui.view;ui.coachSession=saved.coachSession||ui.coachSession;if(saved.sel)ui.sel=saved.sel;}}catch(e){}
+try{var saved=JSON.parse(sessionStorage.getItem('tt-ui')||'null');if(saved){ui.view=saved.view||ui.view;ui.coachSession=saved.coachSession||ui.coachSession;if(saved.sel)ui.sel=saved.sel;if(saved.agroup)ui.agroup=saved.agroup;}}catch(e){}
 var db=null,fauth=null;
-var GROUPS=[{id:1,name:'Hópur 1 · á staðnum',remote:false},{id:2,name:'Hópur 2 · fjarþjálfun',remote:true},{id:3,name:'Hópur 3 · framhald',remote:false},{id:4,name:'Hópur 4 · framhald fjarþjálfun',remote:true}];
+var GROUPS=[{id:1,name:'Hópur 1 · á staðnum',remote:false,short:'H1'},{id:2,name:'Hópur 2 · fjarþjálfun',remote:true,short:'F1'},{id:3,name:'Hópur 3 · framhald',remote:false,short:'H2'},{id:4,name:'Hópur 4 · framhald fjarþjálfun',remote:true,short:'F2'}];
+var GTABS=[1,3,2,4];
+function gshort(g){return GROUPS[gid(g)-1].short}
 function gid(v){v=Number(v);return v>=1&&v<=4?v:1}
 function isRemote(g){return gid(g)===2||gid(g)===4}
 function groupOpts(sel,extra){var h='';GROUPS.forEach(function(g){h+='<option value="'+g.id+'"'+(String(sel)===String(g.id)?' selected':'')+'>'+(extra?'Í hóp '+g.id+g.name.slice(7):g.name)+'</option>'});return h}
@@ -168,7 +170,7 @@ function cls(n,goodUp){if(!n)return'';return(n>0)===(goodUp!==false)?'up':'down'
 function hrMax(x){if(x&&x.hrmax)return x.hrmax;var m=0;SESSIONS.forEach(function(s){if(x[s.k]&&x[s.k].max>m)m=x[s.k].max});return m||null}
 function testMax(x){var m=0;SESSIONS.forEach(function(s){if(x[s.k]&&x[s.k].max>m)m=x[s.k].max});return m||null}
 function countDone(x){return SESSIONS.filter(function(s){return x[s.k]}).length}
-function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.view,coachSession:ui.coachSession,sel:ui.sel}))}catch(e){}}
+function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.view,coachSession:ui.coachSession,sel:ui.sel,agroup:ui.agroup}))}catch(e){}}
 
 function render(){
  if(share.open&&!auth)closeShare();
@@ -198,9 +200,16 @@ function athleteView(){
  var a=byId(ui.sel)||state.athletes[0],x=data[a.id]||{};
  team=teamFor(a);
  var html='';
- if(canEdit){html+='<div class="chips" role="group" aria-label="Veldu iðkanda">';
- state.athletes.forEach(function(b){html+='<button class="chip'+(isRemote(b.group)?' remote':'')+'" data-act="sel" data-id="'+b.id+'" aria-pressed="'+(b.id===a.id)+'">'+esc(b.name)+' <small>H'+gid(b.group)+'</small>'+'</button>'});
+ if(canEdit){var ag=ui.agroup||gid(a.group);
+ html+='<div class="gtabs" role="tablist" aria-label="Veldu hóp">';
+ GTABS.forEach(function(g){var n=inGroup(g).length;html+='<button class="gtab'+(GROUPS[g-1].remote?' remote':'')+'" role="tab" data-act="agroup" data-g="'+g+'" aria-selected="'+(g===ag)+'" title="'+esc(GROUPS[g-1].name)+'">'+GROUPS[g-1].short+' <small>'+n+'</small></button>'});
+ html+='</div><div class="gtab-name">'+esc(GROUPS[ag-1].name)+'</div>';
+ var gl=inGroup(ag);
+ if(!gl.length)html+='<p class="desc">Engir iðkendur í þessum hópi.</p>';
+ else{html+='<div class="chips" role="group" aria-label="Veldu iðkanda">';
+ gl.forEach(function(b){html+='<button class="chip'+(isRemote(b.group)?' remote':'')+'" data-act="sel" data-id="'+b.id+'" aria-pressed="'+(b.id===a.id)+'">'+esc(b.name)+'</button>'});
  html+='</div>';}
+ if(gid(a.group)!==ag){if(gl.length){a=gl[0];x=data[a.id]||{};ui.sel=a.id;team=teamFor(a)}else return html;}}
  var t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
  var d1=(t1a!=null&&t1b!=null)?t1b-t1a:null,d2=(c1!=null&&c5!=null)?c5-c1:null;
  html+=weekCard(a)+hrCard(x,a)+guideCard(x,a);
@@ -871,7 +880,8 @@ function save(){
 app.addEventListener('click',function(e){
  var el=e.target.closest('[data-act]');if(!el)return;var act=el.getAttribute('data-act');
  if(act==='view'){ui.view=el.getAttribute('data-v');ui.pick=null;persistUi();render();window.scrollTo(0,0)}
- else if(act==='sel'){ui.sel=el.getAttribute('data-id');ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
+ else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
+ else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}
  else if(act==='pick'){ui.pick=el.getAttribute('data-k');var y=window.scrollY;render();window.scrollTo(0,y)}
  else if(act==='save')save();
