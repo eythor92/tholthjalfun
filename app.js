@@ -220,7 +220,7 @@ function athleteView(){
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1lab(x.w1t1)+(t1b!=null?' → mín '+t1b+' · '+t1lab(x.w5t1):' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Æfingar kláraðar',countDone(x)+'<span style="font-size:.55em;color:var(--muted)"> / 10</span>','Próf og æfingar');
- html+='</div></section>'+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+(canEdit?sessionsCard(x)+homeCard(x):'');
+ html+='</div></section>'+formCard(x)+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+(canEdit?sessionsCard(x)+homeCard(x):'');
  return html;
 }
 function weekView(){
@@ -268,6 +268,20 @@ function hrSave(){
  var FV=firebase.firestore.FieldValue,upd={updated:FV.serverTimestamp()};upd['data.hrmax']=v==null?FV.delete():v;
  saving=true;render();
  athleteRef(a.id).update(upd).then(function(){data[a.id]=data[a.id]||{};if(v==null)delete data[a.id].hrmax;else data[a.id].hrmax=v;saving=false;render();toast('Hámarkspúls vistaður.')}).catch(function(e){saving=false;render();toast(e&&e.code==='permission-denied'?'Ekki tókst að vista. Biddu þjálfarann að uppfæra reglurnar í Firebase.':'Ekki tókst að vista. Athugaðu netsambandið og reyndu aftur.')});
+}
+function stageDiff(a,b){var sa=a&&a.stages||[],sb=b&&b.stages||[],n=0,d=0;for(var i=0;i<Math.min(sa.length,sb.length);i++)if(sa[i]!=null&&sb[i]!=null){d+=sb[i]-sa[i];n++}return n>=2?Math.round(d/n):null}
+function formCard(x){
+ var a1=x.w1t1,b1=x.w5t1,c1=total(x.w1t2),c5=total(x.w5t2),sig=[];
+ if(a1&&b1&&a1.min!=null&&b1.min!=null){var dm=b1.min-a1.min;sig.push({ok:dm>0,t:dm>0?'<b>'+dm+' '+(dm===1?'mínútu':'mínútum')+' lengra</b> í Prófi 1':dm===0?'Sama mínúta í Prófi 1':'Styttra í Prófi 1 en í viku 1'})}
+ var sd=stageDiff(a1,b1);if(sd!=null)sig.push({ok:sd<0,t:sd<0?'<b>'+(-sd)+' slögum lægri púls</b> á sama hraða':sd===0?'Sami púls á sama hraða':'Hærri púls á sama hraða'});
+ var r1=recov(a1),r5=recov(b1);if(r1!=null&&r5!=null)sig.push({ok:r5>r1,t:r5>r1?'Púlsinn fellur <b>'+(r5-r1)+' slögum hraðar</b> eftir átak':'Endurheimtin er svipuð eða hægari'});
+ if(c1!=null&&c5!=null){var pc=pct(c1,c5);sig.push({ok:c5>c1,t:c5>c1?'<b>'+fmtPct(pc).replace('+','')+' fleiri kaloríur</b> í Prófi 2 (+'+(c5-c1)+' kal)':c5===c1?'Sami fjöldi kaloría í Prófi 2':'Færri kaloríur í Prófi 2'})}
+ if(!sig.length)return'';
+ var ok=sig.filter(function(q){return q.ok}).length,all=sig.length,head,sub;
+ if(ok===all){head='Já, þolið þitt er orðið betra! 💪';sub=all>1?'Öll '+all+' merkin sýna betra þol. Frábær vinna síðustu vikur.':'Vel gert, vinnan síðustu vikur skilaði sér.'}
+ else if(ok*2>=all){head='Þú ert á réttri leið! 👊';sub=ok+' af '+all+' merkjum sýna betra þol. Dagsformið hefur alltaf áhrif á próf, svo þetta er góð niðurstaða.'}
+ else{head='Prófin sýna litla breytingu í þetta sinn';sub='Svefn, þreyta og dagsform hafa mikil áhrif á próf. Það sem skiptir máli er að þú mættir og kláraðir, og grunnurinn er kominn til að byggja á.'}
+ return'<section class="card form-card"><div class="form-eyebrow">Er þolið orðið betra?</div><h3>'+head+'</h3><ul class="form-list">'+sig.map(function(q){return'<li class="'+(q.ok?'f-ok':'f-no')+'"><span>'+(q.ok?'✓':'–')+'</span><div>'+q.t+'</div></li>'}).join('')+'</ul><p class="trend">'+sub+'</p></section>';
 }
 function vsCard(x){
  if(!team)return'';
@@ -393,7 +407,10 @@ function test1Card(x){
   var t=r[1]&&r[1].min;
   html+='<div class="cmp-row"><span class="lab">'+r[0]+'</span><div class="bar">'+(t!=null?'<i class="'+r[2]+'" style="width:'+Math.max(18,t/mx*100)+'%"></i><span class="num">Mínúta '+t+' · '+t1lab(r[1])+'</span>':'<span class="num" style="color:var(--muted);font-weight:500">Endurpróf í viku 5</span>')+'</div></div>';
  });
- html+='</div>'+stageBlock(a,b)+miniTable(a,b,true);
+ html+='</div>';
+ if(a&&b&&a.min!=null&&b.min!=null){var dm=b.min-a.min;html+='<div class="trend">'+(dm>0?'Þú komst <b class="num">'+dm+' '+(dm===1?'mínútu':'mínútum')+' lengra</b> í viku 5 en í viku 1 ('+t1lab(a)+' → '+t1lab(b)+'). Þú þolir nú meira álag lengur, sem þýðir betra þol. Vel gert! 💪':dm===0?'Þú náðir sömu mínútu í báðum prófum. Skoðaðu líka púlsinn og endurheimtina: ef púlsinn er lægri á sama hraða er þolið samt orðið betra.':'Þú náðir ekki eins langt í viku 5. Dagsformið skiptir miklu í hámarksprófi (svefn, þreyta, næring), svo horfðu líka á púlsinn og endurheimtina.')+'</div>'}
+ else if(a&&a.min!=null&&!b)html+='<div class="trend">Þetta er upphafspunkturinn þinn. Í viku 5 reynirðu að komast lengra.</div>';
+ html+=stageBlock(a,b)+miniTable(a,b,true);
  var ra=recov(a),rb=recov(b);
  if(ra!=null||rb!=null)html+='<div class="trend">'+(ra!=null&&rb!=null?'Endurheimt: púlsinn féll um <b class="num">'+ra+'</b> slög á 1 mín í viku 1 og <b class="num">'+rb+'</b> í viku 5. '+(rb>ra?'Hraðari endurheimt þýðir betra þol.':''):'Endurheimt: púlsinn féll um <b class="num">'+(ra!=null?ra:rb)+'</b> slög fyrstu mínútuna eftir prófið. Því meira, því betra.')+'</div>';
  var hm=hrMax(x);
@@ -408,7 +425,7 @@ function test1Card(x){
 function stageBlock(a,b){
  var sa=a&&a.stages||[],sb=b&&b.stages||[];
  var n=Math.max(sa.length,sb.length);if(!n)return'';
- var all=nn(sa.concat(sb));if(!all.length)return'';var lo=Math.floor((Math.min.apply(null,all)-5)/10)*10,hi=Math.ceil((Math.max.apply(null,all)+5)/10)*10;
+ var all=nn(sa.concat(sb));if(all.length<4)return'';var lo=Math.floor((Math.min.apply(null,all)-5)/10)*10,hi=Math.ceil((Math.max.apply(null,all)+5)/10)*10;
  var W=360,H=210,pl=32,pr=12,top=12,bot=172;
  var X=function(i){return pl+(n>1?i/(n-1):.5)*(W-pl-pr)},Y=function(v){return bot-(v-lo)/(hi-lo)*(bot-top)};
  var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Púls á hverju þrepi, vika 1 og vika 5">';
@@ -474,6 +491,8 @@ function test2Card(x){
   html+='<div class="cmp-row"><span class="lab">'+r[0]+'</span><div class="bar">'+(r[1]!=null?'<i class="'+r[2]+'" style="width:'+Math.max(14,r[1]/tmx*100)+'%"></i><span class="num">'+r[1]+' kal</span>':'<span class="num" style="color:var(--muted);font-weight:500">Endurpróf í viku 5</span>')+'</div></div>';
  });
  html+='</div>';
+ if(ta!=null&&tb!=null)html+='<div class="trend">'+(td>0?'Þú náðir <b class="num">'+td+' fleiri kaloríum</b> samtals í viku 5 ('+fmtPct(pct(ta,tb))+'). Meiri vinna á sama tíma þýðir betra þol. Vel gert! 💪':td===0?'Sami fjöldi kaloría í báðum prófum.':'Færri kaloríur í viku 5 en í viku 1. Dagsformið skiptir miklu, og byrjunarhraðinn hefur mikil áhrif á 10 mín prófi.')+'</div>';
+ else if(ta!=null&&!b)html+='<div class="trend">Þetta er upphafspunkturinn þinn. Í viku 5 reynirðu að ná fleiri kaloríum.</div>';
  return html+miniTable(a,b)+'</section>';
 }
 function filtered(){return SESSIONS.filter(function(s){return ui.filter==='all'||(ui.filter==='tue'&&s.type==='tue')||(ui.filter==='thu'&&s.type==='thu')||(ui.filter==='test'&&(s.type==='t1'||s.type==='t2'))})}
