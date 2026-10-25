@@ -284,7 +284,7 @@ function vsCard(x){
  add('Æfingar kláraðar',countDone(x),team.done,null,' / 10');
  rows=rows.filter(function(r){return r.g!=null});
  if(!rows.length)return'';
- var html='<section class="card vs"><h3>Þú og hópurinn</h3><p class="desc">Þínar tölur bornar saman við meðaltal hópsins þíns, '+groupName(byId(ui.sel)&&byId(ui.sel).group)+' ('+team.n+' iðkendur). Þú sérð ekki tölur annarra einstaklinga.</p><div class="vs-legend"><span><i class="sw" style="background:var(--pulse)"></i>Þú</span><span><i class="sw" style="background:var(--w1)"></i>Meðaltal hópsins</span></div><div class="vs-rows">';
+ var html='<section class="card vs"><h3>Þú og hópurinn</h3><p class="desc">Þínar tölur bornar saman við meðaltal hópsins þíns. Þú sérð ekki tölur annarra einstaklinga.</p><div class="vs-legend"><span><i class="sw" style="background:var(--pulse)"></i>Þú</span><span><i class="sw" style="background:var(--w1)"></i>Meðaltal hópsins</span></div><div class="vs-rows">';
  rows.forEach(function(r){var mx=Math.max(Math.abs(r.y||0),Math.abs(r.g||0))||1;
   function bar(v,c){return'<div class="vs-bar"><i class="'+c+'" style="width:'+(v!=null?Math.max(4,Math.max(0,v)/mx*100):0)+'%"></i><span class="num">'+(v!=null?r.f(v)+r.u:'—')+'</span></div>'}
   html+='<div class="vs-row"><div class="vs-l">'+r.l+'</div>'+bar(r.y,'you')+bar(r.g,'grp')+'</div>'});
