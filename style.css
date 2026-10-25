@@ -328,3 +328,12 @@ table.entry.codes select{min-width:180px}
  .tabs.many .tab{padding:10px 8px 12px;font-size:14.5px}
  .tabs.many .t-wide{display:none}
 }
+.form-card{border-left:6px solid var(--good)}
+.form-eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
+.form-list{list-style:none;padding:0;margin:10px 0 6px;display:grid;gap:6px}
+.form-list li{display:flex;gap:10px;align-items:baseline;font-size:15.5px;line-height:1.4}
+.form-list li span{font-weight:800;width:18px;flex:none;text-align:center}
+.form-list li.f-ok span{color:var(--good)}
+.form-list li.f-no{color:var(--muted)}
+.rpm-note{font-size:14px;color:var(--muted);background:var(--soft);border-radius:8px;padding:8px 10px;margin:-2px 0 12px;line-height:1.45}
+.rpm-note b{color:var(--ink)}
