@@ -76,7 +76,7 @@ function openCode(code,remember){
  db.collection('athletes').doc(code).get().then(function(d){busy='';booting=false;
   if(!d.exists){loginErr='Þessi kóði fannst ekki. Athugaðu hann eða talaðu við þjálfarann.';try{if(storedCode()===code)localStorage.removeItem('tt-code')}catch(e){}render();return}
   var v=d.data();state.athletes=[{id:code,name:v.name||'Iðkandi',group:gid(v.group)}];data={};data[code]=v.data||{};
-  auth={who:code};canEdit=false;ui.view='athlete';ui.sel=code;loginErr='';team=null;
+  auth={who:code};canEdit=false;ui.view='week';ui.sel=code;loginErr='';team=null;
   loadPlan();teamDoc=null;db.collection('meta').doc('team').get().then(function(t){if(t.exists){teamDoc=t.data();if(auth&&!canEdit)render()}}).catch(function(){});
   if(remember){try{localStorage.setItem('tt-code',code)}catch(e){}}
   render();
@@ -175,10 +175,10 @@ function persistUi(){try{sessionStorage.setItem('tt-ui',JSON.stringify({view:ui.
 function render(){
  if(share.open&&!auth)closeShare();
  var me=auth&&!canEdit?byId(auth.who):null,selfOK=!!(me&&isRemote(me.group));
- var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['plan','Æfingaplan'],['coach','Skrá niðurstöður']]:selfOK?[['athlete','Mínar niðurstöður'],['self','Skrá æfingu']]:[];
- if(auth&&!canEdit){ui.sel=auth.who;if(ui.view!=='self'||!selfOK)ui.view='athlete'}
- if(canEdit&&ui.view==='self')ui.view='athlete';
- var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="brand"><img class="brand-logo" src="logo-box800-white.png" alt="BOX800" width="533" height="309"><span class="eyebrow">Þjálfunarlota · 5 vikur</span></div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs" role="tablist">';
+ var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['plan','Æfingaplan'],['coach','Skrá niðurstöður']]:auth?[['week','Vikan'],['hr','Púlstafla'],['athlete','Árangur'],['log','Æfingar']].concat(selfOK?[['self','Skrá<span class="t-wide"> æfingu</span>']]:[]):[];
+ if(auth&&!canEdit){ui.sel=auth.who;if(!(ui.view==='week'||ui.view==='hr'||ui.view==='log'||ui.view==='athlete'||(ui.view==='self'&&selfOK)))ui.view='week'}
+ if(canEdit&&/^(self|week|hr|log)$/.test(ui.view))ui.view='athlete';
+ var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="brand"><img class="brand-logo" src="logo-box800-white.png" alt="BOX800" width="533" height="309"><span class="eyebrow">Þjálfunarlota · 5 vikur</span></div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs'+(tabs.length>=5?' many':'')+'" role="tablist">';
  tabs.forEach(function(t){html+='<button class="tab" role="tab" data-act="view" data-v="'+t[0]+'" aria-selected="'+(ui.view===t[0])+'">'+t[1]+'</button>'});
  html+='</nav></div></header><main class="wrap">';
  if(setupErr){app.innerHTML=html+'<section class="card login"><h3>Vantar uppsetningu</h3><p class="desc">'+setupErr+'</p></section></main>';return}
@@ -187,11 +187,14 @@ function render(){
  if(ui.view==='athlete')html+=athleteView();
  else if(ui.view==='team')html+=teamView();
  else if(ui.view==='self')html+=selfView();
+ else if(ui.view==='week')html+=weekView();
+ else if(ui.view==='hr')html+=hrView();
+ else if(ui.view==='log')html+=logView();
  else if(ui.view==='plan'&&canEdit)html+=planView();
  else html+=coachView();
  html+='</main>';
  app.innerHTML=html;
- if(ui.view==='athlete')drawChart();
+ if(ui.view==='athlete'||ui.view==='log')drawChart();
  if(share.open&&(ui.view!=='athlete'||!auth))closeShare();
 }
 
@@ -212,20 +215,26 @@ function athleteView(){
  if(gid(a.group)!==ag){if(gl.length){a=gl[0];x=data[a.id]||{};ui.sel=a.id;team=teamFor(a)}else return html;}}
  var t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
  var d1=(t1a!=null&&t1b!=null)?t1b-t1a:null,d2=(c1!=null&&c5!=null)?c5-c1:null;
- html+=installCard()+weekCard(a)+hrCard(x,a)+guideCard(x,a);
+ html+=canEdit?weekCard(a)+hrCard(x,a)+guideCard(x,a):'';
  html+='<section class="hero"><div><h2>'+esc(a.name)+'</h2><div class="sub">Próf í viku 1 borin saman við endurpróf í viku 5, auk allra æfinga þar á milli.</div></div><div class="stats">';
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1lab(x.w1t1)+(t1b!=null?' → mín '+t1b+' · '+t1lab(x.w5t1):' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Æfingar kláraðar',countDone(x)+'<span style="font-size:.55em;color:var(--muted)"> / 10</span>','Próf og æfingar');
- html+='</div></section>'+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+sessionsCard(x)+homeCard(x);
+ html+='</div></section>'+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+(canEdit?sessionsCard(x)+homeCard(x):'');
  return html;
 }
+function weekView(){
+ var a=byId(auth.who);if(!a)return'';var wc=weekCard(a);
+ return installCard()+(wc||'<section class="card"><h3>Æfingar vikunnar</h3><p class="desc">Þjálfarinn hefur ekki birt æfingar vikunnar enn.</p></section>');
+}
+function hrView(){var a=byId(auth.who);if(!a)return'';var x=data[a.id]||{};return hrCard(x,a)+guideCard(x,a)}
+function logView(){var a=byId(auth.who);if(!a)return'';var x=data[a.id]||{};team=teamFor(a);return sessionsCard(x)+homeCard(x)}
 function installCard(){
  var st=false;try{st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){}
  if(st||canEdit)return'';var dis=false;try{dis=localStorage.getItem('tt-install')==='0'}catch(e){}if(dis)return'';
  var ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document),android=/Android/.test(ua);
  if(!ios&&!android)return'';
- var how=ios?(/CriOS|FxiOS|EdgiOS/.test(ua)?'Opnaðu síðuna í <b>Safari</b>, ýttu á <b>Deila</b> táknið (ferningur með ör upp) og veldu <b>Bæta á heimaskjá</b>.':'Ýttu á <b>Deila</b> táknið neðst (ferningur með ör upp) og veldu <b>Bæta á heimaskjá</b> (Add to Home Screen).'):'Ýttu á <b>⋮</b> efst í Chrome og veldu <b>Setja upp forrit</b> eða <b>Bæta á heimaskjá</b>.';
+ var how=ios?(/CriOS|FxiOS|EdgiOS/.test(ua)?'Ýttu á <b>Deila</b> táknið <b>efst til hægri</b> í vefslóðarstikunni (ferningur með ör upp), skrunaðu niður og veldu <b>Bæta á heimaskjá</b>.':'Ýttu á <b>Deila</b> táknið neðst (ferningur með ör upp) og veldu <b>Bæta á heimaskjá</b> (Add to Home Screen).'):'Ýttu á <b>⋮</b> efst í Chrome og veldu <b>Setja upp forrit</b> eða <b>Bæta á heimaskjá</b>.';
  return'<section class="install"><div><b>Settu Þolþjálfun á heimaskjáinn</b><span>'+how+' Þá opnast síðan eins og app.</span></div><button class="btn ghost sm" data-act="install-x" aria-label="Loka">Loka</button></section>';
 }
 function hrCard(x,a){

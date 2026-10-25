@@ -91,6 +91,16 @@ Hvað er skráð:
 - **Tími í svæðum** er í sömu röð og hjá Polar (svæði 5 fyrst). Skrifaðu tímann eins og Polar sýnir hann, t.d. `00:22:16` eða `22:16`. Það má sleppa honum.
 - Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar. Í reitinn **Púls 1 mín** skráirðu púlsinn nákvæmlega 60 sekúndum eftir að iðkandinn hætti (iðkandinn hvílir þessa mínútu). Síðan reiknar út **endurheimt**: hámarkspúls mínus púls eftir 1 mín.
 
+## Síða iðkenda
+Iðkendur sjá síðuna sína í flipum, svo hún verður ekki endalaust skrun:
+- **Vikan:** æfingar vikunnar (opnast fyrst).
+- **Púlstafla:** bpm fyrir hvert %-bil, zone 2 og hámarkspúlsinn þeirra. Fjarhópar fá líka leiðbeiningarnar „Svona tekur þú æfingarnar“.
+- **Árangur:** prófin, viku 1 á móti viku 5, samanburður við hópinn og mynd fyrir Instagram.
+- **Æfingar:** allar æfingar með grafi, og heimaæfingar.
+- **Skrá æfingu:** aðeins fyrir fjarhópa (2 og 4).
+
+Þegar þú opnar iðkanda sem þjálfari sérðu allt á einni síðu.
+
 ## Gott að vita
 - **Púlstaflan:** Efst á síðu hvers iðkanda er tafla sem sýnir hvaða púls (bpm) passar við 60–65%, 65–70% … upp í 90%+, miðað við hámarkspúls hans. Gott fyrir þá sem eru með úr sem sýnir bara slög. Iðkendur í öllum hópum geta skráð núverandi hámarkspúls sinn í töflunni, svo hún virkar strax frá fyrsta degi. Skráði hámarkspúlsinn stýrir töflunni. Ef enginn hefur verið skráður er hæsti púls af prófi eða æfingu notaður. Til að þetta virki þarf að líma nýju `firestore.rules` inn í Firebase (Firestore → Rules → Publish).
 - **Meðaltal hópsins:** Iðkendur sjá spjaldið „Þú og hópurinn“ og strikaða línu fyrir meðalpúls hópsins í grafinu. Meðaltalið uppfærist í hvert sinn sem þú vistar. Það birtist aðeins þegar a.m.k. 3 iðkendur eru með tölur, svo enginn geti reiknað út tölur annarra.

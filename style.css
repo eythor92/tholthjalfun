@@ -323,3 +323,8 @@ table.entry.codes select{min-width:180px}
 .install > div > b{display:block;margin-bottom:2px}
 .install span b{color:var(--ink)}
 .install span{font-size:14px;color:var(--muted);line-height:1.45}
+@media (max-width:520px){
+ .tabs.many{gap:0}
+ .tabs.many .tab{padding:10px 8px 12px;font-size:14.5px}
+ .tabs.many .t-wide{display:none}
+}
