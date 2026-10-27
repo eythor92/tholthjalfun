@@ -679,9 +679,15 @@ function coachView(){
  });
  html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save"'+(saving?' disabled':'')+'>'+(saving?'Vista…':'Vista æfingu')+'</button><span class="status">Vistast beint. Iðkendur sjá tölurnar strax.</span></div></section>';
  html+='<section class="card"><h3>Iðkendur og kóðar</h3><p class="desc">Sendu hverjum iðkanda kóðann sinn eða hlekkinn. Kóðinn opnar aðeins hans eigin síðu. Ef kóði fer á flakk býrðu til nýjan og sá gamli hættir að virka.</p>';
- if(state.athletes.length){
+ var kg=ui.kgroup||'all',klist=kg==='all'?state.athletes:inGroup(kg);
+ html+='<div class="gtabs" role="tablist" aria-label="Sía eftir hópi">';
+ GTABS.forEach(function(g){html+='<button class="gtab'+(GROUPS[g-1].remote?' remote':'')+'" role="tab" data-act="kgroup" data-g="'+g+'" aria-selected="'+(String(kg)===String(g))+'" title="'+esc(GROUPS[g-1].name)+'">'+GROUPS[g-1].short+' <small>'+inGroup(g).length+'</small></button>'});
+ html+='<button class="gtab" role="tab" data-act="kgroup" data-g="all" aria-selected="'+(kg==='all')+'">Allir <small>'+state.athletes.length+'</small></button></div>';
+ if(kg!=='all')html+='<div class="gtab-name">'+esc(GROUPS[kg-1].name)+'</div>';
+ if(state.athletes.length&&!klist.length)html+='<p class="desc">Engir iðkendur í þessum hópi enn. Bættu þeim við hér fyrir neðan.</p>';
+ if(klist.length){
   html+='<div class="tablewrap"><table class="entry codes"><thead><tr><th>Nafn</th><th>Hópur</th><th>Kóði</th><th></th></tr></thead><tbody>';
-  state.athletes.forEach(function(a){var nv=renames[a.id]!=null?renames[a.id]:a.name;
+  klist.forEach(function(a){var nv=renames[a.id]!=null?renames[a.id]:a.name;
    html+='<tr><td><input id="rn-'+a.id+'" data-rename="'+a.id+'" value="'+esc(nv)+'" aria-label="Nafn"></td><td><select id="rg-'+a.id+'" data-regroup="'+a.id+'" aria-label="Hópur">'+groupOpts(regroups[a.id]||gid(a.group))+'</select></td><td class="code num">'+a.id+'</td><td class="row-actions"><button class="btn ghost sm" data-act="copy" data-id="'+a.id+'">'+(copied===a.id?'Afritað ✓':'Afrita hlekk')+'</button><button class="btn ghost sm" data-act="regen" data-id="'+a.id+'">Nýr kóði</button><button class="btn ghost sm danger" data-act="remove" data-id="'+a.id+'">'+(confirmDel===a.id?'Ýttu aftur til að eyða':'Fjarlægja')+'</button></td></tr>'});
   html+='</tbody></table></div><div class="actions"><button class="btn" data-act="save-names"'+(busy?' disabled':'')+'>Vista breytingar</button></div>';
  }
@@ -944,6 +950,7 @@ app.addEventListener('click',function(e){
  var el=e.target.closest('[data-act]');if(!el)return;var act=el.getAttribute('data-act');
  if(act==='view'){ui.view=el.getAttribute('data-v');ui.pick=null;persistUi();render();window.scrollTo(0,0)}
  else if(act==='install-x'){try{localStorage.setItem('tt-install','0')}catch(e){}render()}
+ else if(act==='kgroup'){var kv=el.getAttribute('data-g');ui.kgroup=kv==='all'?'all':Number(kv);if(kv!=='all')newGroup=kv;render()}
  else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}
