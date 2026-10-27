@@ -475,10 +475,10 @@ function stageBlock(a,b){
  return html+'</tbody></table></div></details></div>';
 }
 function recov(v){return v&&v.max!=null&&v.rec!=null&&v.max>=v.rec?v.max-v.rec:null}
-function miniTable(a,b,t1){
- var rows=[['Meðalpúls','avg',' bpm'],['Hámarkspúls','max',' bpm']];
+function miniTable(a,b,t1,t2){
+ var rows=t2?[['Hámarkspúls','max',' bpm']]:[['Meðalpúls','avg',' bpm'],['Hámarkspúls','max',' bpm']];
  if(t1)rows.push(['Púls 1 mín eftir próf','rec',''],['Endurheimt (slög á 1 mín)',recov,'']);
- rows.push(['Heildarkaloríur (Polar)','kcal','']);
+ if(!t2)rows.push(['Heildarkaloríur (Polar)','kcal','']);
  function g(o,r){return typeof r[1]==='function'?r[1](o):(o&&o[r[1]])}
  var html='<table class="mini num"><thead><tr><th></th><th>Vika 1</th><th>Vika 5</th><th>Breyting</th></tr></thead><tbody>';
  rows=rows.filter(function(r){return g(a,r)!=null||g(b,r)!=null});if(!rows.length)return'';
@@ -517,7 +517,7 @@ function test2Card(x){
  html+='</div>';
  if(ta!=null&&tb!=null)html+='<div class="trend">'+(td>0?'Þú náðir <b class="num">'+td+' fleiri kaloríum</b> samtals í viku 5 ('+fmtPct(pct(ta,tb))+'). Meiri vinna á sama tíma þýðir betra þol. Vel gert! 💪':td===0?'Sami fjöldi kaloría í báðum prófum.':'Færri kaloríur í viku 5 en í viku 1. Dagsformið skiptir miklu, og byrjunarhraðinn hefur mikil áhrif á 10 mín prófi.')+'</div>';
  else if(ta!=null&&!b)html+='<div class="trend">Þetta er upphafspunkturinn þinn. Í viku 5 reynirðu að ná fleiri kaloríum.</div>';
- return html+miniTable(a,b)+'</section>';
+ return html+miniTable(a,b,false,true)+'</section>';
 }
 function filtered(){return SESSIONS.filter(function(s){return ui.filter==='all'||(ui.filter==='tue'&&s.type==='tue')||(ui.filter==='thu'&&s.type==='thu')||(ui.filter==='test'&&(s.type==='t1'||s.type==='t2'))})}
 function sessionsCard(x){
@@ -534,8 +534,8 @@ function sessionsCard(x){
   var s=SESSIONS.filter(function(q){return q.k===pk})[0],v=x[pk],hm=hrMax(x),prev=null;
   for(var i=SESSIONS.indexOf(s)-1;i>=0;i--){if(SESSIONS[i].type===s.type&&x[SESSIONS[i].k]){prev=SESSIONS[i];break}}
   html+='<div class="detail"><div class="t">Vika '+s.w+' · '+esc(s.label)+'</div>';
-  html+='<div class="m">Meðalpúls <b class="num">'+(v.avg!=null?v.avg:'—')+'</b>'+(hm&&v.avg?' <span class="num">('+Math.round(v.avg/hm*100)+'% af hámarki)</span>':'')+'</div>';
-  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div><div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>';
+  if(s.type!=='t2')html+='<div class="m">Meðalpúls <b class="num">'+(v.avg!=null?v.avg:'—')+'</b>'+(hm&&v.avg?' <span class="num">('+Math.round(v.avg/hm*100)+'% af hámarki)</span>':'')+'</div>';
+  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div>'+(s.type!=='t2'?'<div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>':'');
   if(s.type==='t1'&&v.min!=null)html+='<div class="m">Kláraði <b class="num">mín '+v.min+' · '+t1lab(v)+'</b></div>';
   if(s.type==='t1'&&recov(v)!=null)html+='<div class="m">Endurheimt <b class="num">'+recov(v)+' slög</b> á 1 mín</div>';
   if(s.type==='t2'&&total(v)!=null){if(v.parts)v.parts.forEach(function(q,i){if(q&&q.c!=null)html+='<div class="m">'+(i+1)+'. '+esc(devName(q.m))+' <b class="num">'+q.c+'</b></div>'});else MACHINES.forEach(function(m){if(v[m[0]]!=null)html+='<div class="m">'+m[1]+' <b class="num">'+v[m[0]]+'</b></div>'});html+='<div class="m">Samtals á tækjum <b class="num">'+total(v)+'</b></div>'}
@@ -658,7 +658,7 @@ function coachView(){
  var real=data;
  var fields;
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['rec','Púls 1 mín<small>eftir próf</small>'],['kcal','Polar kaloríur'])}
- else if(s.type==='t2'){fields=[['avg','Meðalpúls'],['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])});fields.push(['kcal','Polar kaloríur'])}
+ else if(s.type==='t2'){fields=[['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])})}
  else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.<small>úr Polar</small>']].concat(s.type==='thu'?[['mkcal','Kal á tækjum<small>öll sett samtals</small>']]:[]);
  var zon=!!ui.zones;try{if(ui.zones==null)zon=localStorage.getItem('tt-zones')==='1'}catch(e){}
  if(zon)fields=fields.concat(zf);
@@ -808,6 +808,7 @@ function minFor(rpm){return rpm<=60?Math.floor((rpm-50)/2)+1:rpm-54}
 function selfFields(s){
  if(s.type==='t1'&&selfDev(s)==='tread')return[['min','Síðasta heila mínúta','Mín 1 = 8 km/klst, mín 2 = 8,5, mín 3 = 9 …'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Hvíldu þessa mínútu.'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
  if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Hvíldu þessa mínútu.'],['kcal','Heildarkaloríur úr úrinu (valfrjálst)','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
+ if(s.type==='t2')return[['max','Hámarkspúls','Hæsti púls í prófinu, úr úrinu.']];
  if(s.type==='thu')return[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir.'],['mkcal','Kaloríur á tækjum (öll sett samtals)','Kaloríurnar sem tækið sýndi eftir hvert sett, lagðar saman. Þetta er talan sem þú reynir að slá næsta fimmtudag.']];
  if(s.type==='home')return[['mins','Mínútur','Hve lengi æfingin var.'],['avg','Meðalpúls (valfrjálst)','Úr úrinu, ef þú varst með það.'],['kcal','Kaloríur (valfrjálst)','Úr úrinu, ef þú varst með það.']];
  var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
