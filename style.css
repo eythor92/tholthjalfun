@@ -337,3 +337,8 @@ table.entry.codes select{min-width:180px}
 .form-list li.f-no{color:var(--muted)}
 .rpm-note{font-size:14px;color:var(--muted);background:var(--soft);border-radius:8px;padding:8px 10px;margin:-2px 0 12px;line-height:1.45}
 .rpm-note b{color:var(--ink)}
+.beat{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--soft);border-left:4px solid var(--long);font-size:14.5px;line-height:1.45}
+.beat > b{display:block;margin-bottom:2px}
+.beat span{color:var(--muted)}
+.beat span b{color:var(--ink)}
+.beat span b{display:inline;margin:0}

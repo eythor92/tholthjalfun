@@ -91,6 +91,13 @@ Hvað er skráð:
 - **Tími í svæðum** er í sömu röð og hjá Polar (svæði 5 fyrst). Skrifaðu tímann eins og Polar sýnir hann, t.d. `00:22:16` eða `22:16`. Það má sleppa honum.
 - Í **Prófi 1** er einn reitur fyrir hverja mínútu (1 = 50 rpm, 2 = 52 … 6 = 60, 7 = 61 … 20 = 74). Skrifaðu púlsinn fyrir hverja mínútu sem iðkandinn kláraði. Síðan reiknar sjálf út mínútur og RPM, og hæsti púlsinn fer í Hámarkspúls nema þú skrifir annað þar. Í reitinn **Púls 1 mín** skráirðu púlsinn nákvæmlega 60 sekúndum eftir að iðkandinn hætti (iðkandinn hvílir þessa mínútu). Síðan reiknar út **endurheimt**: hámarkspúls mínus púls eftir 1 mín.
 
+## Fimmtudagar · keppni við sjálfan sig
+- Á fimmtudögum skrifa iðkendur niður kaloríurnar á tækinu eftir hvert sett og leggja saman.
+- Þú skráir töluna í dálkinn **Kal á tækjum** í Skrá niðurstöður (hópar 1 og 3). Fjarhópar skrá hana sjálfir.
+- Síðan reiknar **kaloríur á mínútu** (vika 2 er 30 mín, vikur 3 og 4 eru 36 mín), svo samanburðurinn er sanngjarn.
+- Í **Vikan** sjá iðkendur „Talan til að slá“ við fimmtudagsæfinguna: kal/mín og meðalpúls frá síðasta fimmtudegi.
+- Í **Æfingar** sjá þeir spjaldið „Fimmtudagar · keppni við sjálfa/n þig“ með viku fyrir viku og hvort þeir fóru hraðar á sama púlsi.
+
 ## Síða iðkenda
 Iðkendur sjá síðuna sína í flipum, svo hún verður ekki endalaust skrun:
 - **Vikan:** æfingar vikunnar (opnast fyrst).
