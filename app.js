@@ -659,7 +659,7 @@ function coachView(){
  var fields;
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['rec','Púls 1 mín<small>eftir próf</small>'])}
  else if(s.type==='t2'){fields=[['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])})}
- else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.<small>úr Polar</small>']].concat(s.type==='thu'?[['mkcal','Kal á tækjum<small>öll sett samtals</small>']]:[]);
+ else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.']].concat(s.type==='thu'?[['mkcal','Kal á tækjum<small>öll sett samtals</small>']]:[]);
  var zon=!!ui.zones;try{if(ui.zones==null)zon=localStorage.getItem('tt-zones')==='1'}catch(e){}
  if(zon)fields=fields.concat(zf);
  var html='';
