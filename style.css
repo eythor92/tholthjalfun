@@ -342,3 +342,5 @@ table.entry.codes select{min-width:180px}
 .beat span{color:var(--muted)}
 .beat span b{color:var(--ink)}
 .beat span b{display:inline;margin:0}
+.ft strong{font-weight:800;color:var(--ink)}
+.ft-strong span,.ft-p.ft-strong{font-weight:800;color:var(--ink)}

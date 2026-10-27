@@ -697,14 +697,16 @@ function athleteRef(id){return db.collection('athletes').doc(id)}
 function loadPlan(){if(!db)return;db.collection('meta').doc('plan').get().then(function(d){if(d.exists){var v=d.data();plan={g1:v.g1||{},g2:v.g2||{},g3:v.g3||{},g4:v.g4||{},week:v.week||{}};render()}}).catch(function(){})}
 function planItem(group,k){var g=plan['g'+gid(group)]||{};return g[k]||null}
 function isHead(t){return t.length>2&&t===t.toUpperCase()&&/[A-ZÁÐÉÍÓÚÝÞÆÖ]/.test(t)&&!/^[•~]/.test(t)&&!/@/.test(t)}
+function fx(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}
 function fmtLines(lines,inBody){var body=!!inBody;return lines.map(function(l){var t=l.trim();if(!t)return'';
- if(isHead(t)){body=true;return'<div class="ft-h">'+esc(t)+'</div>'}
- if(/^~/.test(t))return'<div class="ft-note">'+esc(t.slice(1).trim())+'</div>';
- if(/^•\s?/.test(t))return'<div class="ft-li">'+esc(t.replace(/^•\s?/,''))+'</div>';
- if(!body)return'<div class="ft-p">'+esc(t)+'</div>';
- var m=t.match(/^(.*?)\s*@\s*(.+)$/),cls='ft-row'+(/90\+|MAX|85–9/i.test(t)?' hot':'')+(/hvíld/i.test(t)?' rest':'');
- if(m)return'<div class="'+cls+'"><span>'+esc(m[1])+'</span><b>@ '+esc(m[2])+'</b></div>';
- return'<div class="'+cls+'"><span>'+esc(t)+'</span></div>'}).join('')}
+ if(isHead(t.replace(/\*\*/g,''))){body=true;return'<div class="ft-h">'+esc(t.replace(/\*\*/g,''))+'</div>'}
+ if(/^~/.test(t))return'<div class="ft-note">'+fx(t.slice(1).trim())+'</div>';
+ if(/^•\s?/.test(t))return'<div class="ft-li">'+fx(t.replace(/^•\s?/,''))+'</div>';
+ var whole=/^\*\*([^*]+)\*\*$/.exec(t),sb=whole?' ft-strong':'';if(whole)t=whole[1];
+ if(!body)return'<div class="ft-p'+sb+'">'+fx(t)+'</div>';
+ var m=t.match(/^(.*?)\s*@\s*(.+)$/),cls='ft-row'+sb+(/90\+|MAX|85–9/i.test(t)?' hot':'')+(/hvíld/i.test(t)?' rest':'');
+ if(m)return'<div class="'+cls+'"><span>'+fx(m[1])+'</span><b>@ '+fx(m[2])+'</b></div>';
+ return'<div class="'+cls+'"><span>'+fx(t)+'</span></div>'}).join('')}
 function fmtText(t){return'<div class="ft">'+fmtLines(String(t).split('\n'))+'</div>'}
 function fmtCompact(t){
  var blocks=[],cur={h:null,lines:[]};String(t).split('\n').forEach(function(l){var x=l.trim();if(x&&x===x.toUpperCase()&&/[A-ZÁÐÉÍÓÚÝÞÆÖ]/.test(x)&&!/^•/.test(x)){blocks.push(cur);cur={h:x,lines:[]}}else cur.lines.push(l)});blocks.push(cur);
@@ -763,7 +765,7 @@ function openLightbox(key){var c=IMG[key];if(!c||!c.src)return;var m=document.cr
 function planVal(g,k,f){var d=planDraft[g]&&planDraft[g][k];if(d&&d[f]!=null)return d[f];var it=(plan[g]||{})[k];return it&&it[f]!=null?it[f]:''}
 function planView(){
  var g=planGroup,dirty=Object.keys(planDraft).length>0;
- var html='<section class="card"><h3>Æfingaplan</h3><p class="desc">Skrifaðu æfingarnar fyrir hvern hóp. Veldu svo hvaða viku á að birta. Iðkendur í hópnum sjá æfingar vikunnar efst á síðunni sinni.</p>';
+ var html='<section class="card"><h3>Æfingaplan</h3><p class="desc">Skrifaðu æfingarnar fyrir hvern hóp. Veldu svo hvaða viku á að birta. Iðkendur í hópnum sjá æfingar vikunnar efst á síðunni sinni. Til að feitletra skrifarðu <code>**orð**</code>, eða <code>**heila línu**</code>.</p>';
  html+='<div class="chips" role="group" aria-label="Hópur">'+GROUPS.map(function(G){return'<button class="chip" data-act="plan-group" data-g="g'+G.id+'" aria-pressed="'+(g==='g'+G.id)+'">'+G.name+'</button>'}).join('')+'</div>';
  var wv=planDraft.__week&&planDraft.__week[g]!=null?planDraft.__week[g]:(plan.week&&plan.week[g])||0;
  html+='<div class="plan-pub"><label class="f" for="plan-week">Birta hjá iðkendum<select id="plan-week" data-g="'+g+'"><option value="0"'+(Number(wv)===0?' selected':'')+'>Ekkert birt</option>';
