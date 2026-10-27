@@ -478,7 +478,7 @@ function recov(v){return v&&v.max!=null&&v.rec!=null&&v.max>=v.rec?v.max-v.rec:n
 function miniTable(a,b,t1,t2){
  var rows=t2?[['Hámarkspúls','max',' bpm']]:[['Meðalpúls','avg',' bpm'],['Hámarkspúls','max',' bpm']];
  if(t1)rows.push(['Púls 1 mín eftir próf','rec',''],['Endurheimt (slög á 1 mín)',recov,'']);
- if(!t2&&!t1)rows.push(['Heildarkaloríur (Polar)','kcal','']);
+ if(!t2&&!t1)rows.push(['Heildarkaloríur','kcal','']);
  function g(o,r){return typeof r[1]==='function'?r[1](o):(o&&o[r[1]])}
  var html='<table class="mini num"><thead><tr><th></th><th>Vika 1</th><th>Vika 5</th><th>Breyting</th></tr></thead><tbody>';
  rows=rows.filter(function(r){return g(a,r)!=null||g(b,r)!=null});if(!rows.length)return'';
@@ -521,7 +521,7 @@ function test2Card(x){
 }
 function filtered(){return SESSIONS.filter(function(s){return ui.filter==='all'||(ui.filter==='tue'&&s.type==='tue')||(ui.filter==='thu'&&s.type==='thu')||(ui.filter==='test'&&(s.type==='t1'||s.type==='t2'))})}
 function sessionsCard(x){
- var html='<section class="card"><div class="sess-head"><div><h3>Allar æfingar</h3><p class="desc" style="margin-bottom:0">Meðalpúls og hámarkspúls, með Polar-kaloríum fyrir neðan. Smelltu á æfingu til að sjá nánar.</p></div><div class="chips" role="group" aria-label="Sía æfingar">';
+ var html='<section class="card"><div class="sess-head"><div><h3>Allar æfingar</h3><p class="desc" style="margin-bottom:0">Meðalpúls og hámarkspúls, með '+(isRemote(byId(ui.sel)&&byId(ui.sel).group)?'kaloríum úr úrinu':'Polar-kaloríum')+' fyrir neðan. Smelltu á æfingu til að sjá nánar.</p></div><div class="chips" role="group" aria-label="Sía æfingar">';
  [['all','Allt'],['tue','Þriðjudagar'],['thu','Fimmtudagar'],['test','Próf']].forEach(function(f){html+='<button class="chip sm" data-act="filter" data-f="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+f[1]+'</button>'});
  html+='</div></div><div class="legend"><span><i class="sw" style="background:var(--test)"></i>Próf</span><span><i class="sw" style="background:var(--pulse)"></i>Þriðjudagur</span><span><i class="sw" style="background:var(--long)"></i>Fimmtudagur</span><span><i class="sw" style="background:var(--muted)"></i>Meðalpúls (neðri tala)</span><span><i class="sw" style="border:2px solid var(--muted)"></i>Hámarkspúls (efri tala)</span>'+(team?'<span><i class="dash"></i>Meðalpúls hópsins</span>':'')+'</div><div class="chartbox" id="chart"></div>';
  var list=filtered().filter(function(s){return x[s.k]});
@@ -811,7 +811,7 @@ function selfFields(s){
  if(s.type==='t2')return[['max','Hámarkspúls','Hæsti púls í prófinu, úr úrinu.']];
  if(s.type==='thu')return[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir.'],['mkcal','Kaloríur á tækjum (öll sett samtals)','Kaloríurnar sem tækið sýndi eftir hvert sett, lagðar saman. Þetta er talan sem þú reynir að slá næsta fimmtudag.']];
  if(s.type==='home')return[['mins','Mínútur','Hve lengi æfingin var.'],['avg','Meðalpúls (valfrjálst)','Úr úrinu, ef þú varst með það.'],['kcal','Kaloríur (valfrjálst)','Úr úrinu, ef þú varst með það.']];
- var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir (Polar, Garmin, Apple Watch o.fl.).']];
+ var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið eða appið sýnir.']];
  return f;
 }
 function selfDev(s){return'assault'}
