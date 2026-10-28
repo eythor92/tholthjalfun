@@ -702,7 +702,8 @@ function athleteRef(id){return db.collection('athletes').doc(id)}
 // ---------- Æfingaplan ----------
 function loadPlan(){if(!db)return;db.collection('meta').doc('plan').get().then(function(d){if(d.exists){var v=d.data();plan={g1:v.g1||{},g2:v.g2||{},g3:v.g3||{},g4:v.g4||{},week:v.week||{}};render()}}).catch(function(){})}
 function planItem(group,k){var g=plan['g'+gid(group)]||{};return g[k]||null}
-function isHead(t){return t.length>2&&t===t.toUpperCase()&&/[A-ZÁÐÉÍÓÚÝÞÆÖ]/.test(t)&&!/^[•~]/.test(t)&&!/@/.test(t)}
+var HEADW=/^(upphitun|teygju\S*|teygjur|æfing|aðalæfing|aðal\s+æfing|cooldown|cool\s*down|niðurkeyrsla|finisher|próf\b|skipulag|hópar|heimavinna|heimaæfing|skráning|skrásetjari)/i;
+function isHead(t){if(/^[•~]/.test(t)||/@/.test(t)||t.length<3)return false;if(t===t.toUpperCase()&&/[A-ZÁÐÉÍÓÚÝÞÆÖ]/.test(t))return true;return t.length<=60&&HEADW.test(t)&&!/^\d/.test(t)}
 var FMT_HM=null;
 function toBpm(h){if(!FMT_HM)return h;var hm=FMT_HM;function b(p){return Math.round(hm*p/100)}function ok(p){return p>=40&&p<=100}
  return h.replace(/(\d{2,3})\s*[–-]\s*(\d{2,3})\s*%/g,function(m,a,c){a=+a;c=+c;if(!ok(a)||!ok(c))return m;return'<span class="bpm">'+b(a)+'–'+b(c)+' bpm</span> <span class="pct">'+a+'–'+c+'%</span>'})
@@ -710,8 +711,8 @@ function toBpm(h){if(!FMT_HM)return h;var hm=FMT_HM;function b(p){return Math.ro
   .replace(/(^|[^\d–>-])(\d{2,3})\s*%(?![^<]*<\/span>)/g,function(m,pre,a){a=+a;if(!ok(a))return m;return pre+'<span class="bpm">'+b(a)+' bpm</span> <span class="pct">'+a+'%</span>'})}
 function isHot(t){return/90\s*%?\s*\+|90\s*[–-]|85\s*[–-]\s*9/.test(t)||(/\bMAX\b/i.test(t)&&!/HR\s*-?\s*MAX/i.test(t)&&!/HÁMARKS/i.test(t))}
 function fx(s){return toBpm(esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'))}
-function fmtLines(lines,inBody){var body=!!inBody;return lines.map(function(l){var t=l.trim();if(!t)return'';
- if(isHead(t.replace(/\*\*/g,''))){body=true;return'<div class="ft-h">'+esc(t.replace(/\*\*/g,''))+'</div>'}
+function fmtLines(lines,inBody){var body=!!inBody,gap=false,first=true;return lines.map(function(l){var t=l.trim();if(!t||/^[-–—]+$/.test(t)){if(first||gap)return'';gap=true;return'<div class="ft-gap"></div>'}gap=false;first=false;
+ if(isHead(t.replace(/\*\*/g,''))){body=true;return'<div class="ft-h">'+esc(t.replace(/\*\*/g,'').toUpperCase())+'</div>'}
  if(/^~/.test(t))return'<div class="ft-note">'+fx(t.slice(1).trim())+'</div>';
  if(/^•\s?/.test(t))return'<div class="ft-li">'+fx(t.replace(/^•\s?/,''))+'</div>';
  var whole=/^\*\*([^*]+)\*\*$/.exec(t),sb=whole?' ft-strong':'';if(whole)t=whole[1];
@@ -736,7 +737,7 @@ function weekCard(a){
  var items=SESSIONS.filter(function(s){return s.w===Number(w)});
  var html='',any=false;
  items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&!it.title&&!it.img)return;any=true;
-  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?(FMT_HM=hrMax(data[a.id]||{}),fmtCompact(it.text)):'')+(THU_MIN[s.k]?beatBox(data[a.id]||{},s.k):'')+imgTag(g,s.k,it.img,'wk-img')+'</div></div>'});
+  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?(FMT_HM=hrMax(data[a.id]||{}),fmtText(it.text)):'')+(THU_MIN[s.k]?beatBox(data[a.id]||{},s.k):'')+imgTag(g,s.k,it.img,'wk-img')+'</div></div>'});
  FMT_HM=null;if(!any)return'';
  var hmw=hrMax(data[a.id]||{});FMT_HM=null;
  return'<section class="card week-card"><div class="eyebrow-dark">Æfingar vikunnar · Vika '+w+'</div>'+(hmw?'<p class="bpm-note">Púlsinn er reiknaður út frá hámarkspúlsinum þínum, <b class="num">'+hmw+' bpm</b>. Prósentan stendur smátt fyrir aftan.</p>':'<p class="bpm-note">Skráðu hámarkspúlsinn þinn í <b>Púlstöflu</b> til að sjá æfingarnar í slögum (bpm) í stað %.</p>')+html+'</section>';
@@ -837,7 +838,7 @@ function selfView(){
  html+='<label class="f" for="me-session">Æfing<select id="me-session">';
  selfList().forEach(function(q){html+='<option value="'+q.k+'"'+(q.k===s.k?' selected':'')+'>Vika '+q.w+' · '+q.label+(x[q.k]?' ✓':'')+'</option>'});
  html+='</select></label>';
- var pw=planItem(a.group,s.k);if(pw&&(pw.text||pw.img))html+='<div class="plan-show"><b>'+esc(pw.title||s.label)+'</b>'+(pw.text?(FMT_HM=hrMax(x),fmtCompact(pw.text)+(FMT_HM=null,'')):'')+imgTag('g'+gid(a.group),s.k,pw.img,'wk-img')+'</div>';
+ var pw=planItem(a.group,s.k);if(pw&&(pw.text||pw.img))html+='<div class="plan-show"><b>'+esc(pw.title||s.label)+'</b>'+(pw.text?(FMT_HM=hrMax(x),fmtText(pw.text)+(FMT_HM=null,'')):'')+imgTag('g'+gid(a.group),s.k,pw.img,'wk-img')+'</div>';
  if(s.type==='t1')html+='<p class="hint">Próf 1 er á Assault Bike: 1. mín 50 rpm, svo +2 á mínútu upp í 60 rpm, eftir það +1 á mínútu. Skráðu síðasta RPM sem þú kláraðir heila mínútu á.<br><b>RPM</b> = snúningar á mínútu, þ.e. hve marga heila hringi pedalarnir fara á einni mínútu. Talan sést á skjá hjólsins.</p>';
  if(s.type==='home')html+='<p class="hint">Róleg aukaæfing, '+s.tip+' í zone 2 (60–70% af hámarkspúls): ganga upp brekkur, hjól, skokk, skíði, sund eða þoltæki. Þú átt að geta andað með nefinu og spjallað allan tímann. Hún telst ekki með í æfingunum 10 en sést á síðunni þinni.</p>';
  if(s.type==='t2')html+='<p class="hint">3 × 10 mín á 1, 2 eða 3 tækjum að eigin vali. Ef þú hefur bara eitt tæki velurðu það í öllum þremur hlutunum. Skráðu kaloríurnar sem tækið sýnir eftir 10 mín. Notaðu sömu tæki í sömu röð í viku 5.</p>';

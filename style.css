@@ -348,3 +348,21 @@ table.entry.codes select{min-width:180px}
 .pct{font-weight:500;font-size:.72em;color:var(--muted);white-space:nowrap}
 .ft-row.hot .pct{color:inherit;opacity:.75}
 .bpm-note{font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.ft-gap{height:12px}
+.ft-gap + .ft-h{margin-top:2px}
+.ft .ft-h{margin-top:14px}
+.ft > .ft-h:first-child{margin-top:4px}
+.ft-row{display:block}
+.ft-row > span{margin-right:6px}
+.ft-row .bpm,.ft-row .pct{margin:0}
+.pct{margin-left:3px}
+.ft-row b{white-space:normal}
+.ft-row b .bpm,.ft-row b .pct{white-space:nowrap}
+@media (max-width:560px){
+ .wk-item{display:block}
+ .wk-tag{display:inline-block;margin:0 0 6px}
+ .wk-body{margin-left:0}
+}
+.wk-body .ft b{display:inline;font-size:inherit;margin:0}
+@media (max-width:560px){.wk-tag{padding:5px 12px}}
+.wk-item + .wk-item{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
