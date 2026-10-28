@@ -708,6 +708,7 @@ function toBpm(h){if(!FMT_HM)return h;var hm=FMT_HM;function b(p){return Math.ro
  return h.replace(/(\d{2,3})\s*[–-]\s*(\d{2,3})\s*%/g,function(m,a,c){a=+a;c=+c;if(!ok(a)||!ok(c))return m;return'<span class="bpm">'+b(a)+'–'+b(c)+' bpm</span> <span class="pct">'+a+'–'+c+'%</span>'})
   .replace(/(\d{2,3})\s*(?:\+\s*%|%\s*\+)/g,function(m,a){a=+a;if(!ok(a))return m;return'<span class="bpm">'+b(a)+'+ bpm</span> <span class="pct">'+a+'%+</span>'})
   .replace(/(^|[^\d–>-])(\d{2,3})\s*%(?![^<]*<\/span>)/g,function(m,pre,a){a=+a;if(!ok(a))return m;return pre+'<span class="bpm">'+b(a)+' bpm</span> <span class="pct">'+a+'%</span>'})}
+function isHot(t){return/90\s*%?\s*\+|90\s*[–-]|85\s*[–-]\s*9/.test(t)||(/\bMAX\b/i.test(t)&&!/HR\s*-?\s*MAX/i.test(t)&&!/HÁMARKS/i.test(t))}
 function fx(s){return toBpm(esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'))}
 function fmtLines(lines,inBody){var body=!!inBody;return lines.map(function(l){var t=l.trim();if(!t)return'';
  if(isHead(t.replace(/\*\*/g,''))){body=true;return'<div class="ft-h">'+esc(t.replace(/\*\*/g,''))+'</div>'}
@@ -715,7 +716,7 @@ function fmtLines(lines,inBody){var body=!!inBody;return lines.map(function(l){v
  if(/^•\s?/.test(t))return'<div class="ft-li">'+fx(t.replace(/^•\s?/,''))+'</div>';
  var whole=/^\*\*([^*]+)\*\*$/.exec(t),sb=whole?' ft-strong':'';if(whole)t=whole[1];
  if(!body)return'<div class="ft-p'+sb+'">'+fx(t)+'</div>';
- var m=t.match(/^(.*?)\s*@\s*(.+)$/),cls='ft-row'+sb+(/90%?\+|90[–-]|MAX|85[–-]9/i.test(t)?' hot':'')+(/hvíld/i.test(t)?' rest':'');
+ var m=t.match(/^(.*?)\s*@\s*(.+)$/),cls='ft-row'+sb+(isHot(t)?' hot':'')+(/hvíld/i.test(t)?' rest':'');
  if(m)return'<div class="'+cls+'"><span>'+fx(m[1])+'</span><b>@ '+fx(m[2])+'</b></div>';
  return'<div class="'+cls+'"><span>'+fx(t)+'</span></div>'}).join('')}
 function fmtText(t){return'<div class="ft">'+fmtLines(String(t).split('\n'))+'</div>'}
