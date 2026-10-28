@@ -73,7 +73,7 @@ Google-innskráning virkar ekki alltaf í símum (t.d. Chrome á iPhone). Þá n
 ## Æfingaplan
 - Flipinn **Æfingaplan** (aðeins fyrir þjálfara) geymir 10 æfingar fyrir hvorn hóp: titil og lýsingu fyrir hverja æfingu, vika 1–5.
 - **Birta hjá iðkendum:** veldu vikuna sem er í gangi og smelltu á **Vista æfingaplan**. Iðkendur í hópnum sjá báðar æfingar vikunnar efst á síðunni sinni.
-- **Snið:** Skrifaðu æfingar eins og á töfluna, ein lína í senn: `3 mín @ 60–65%`. Fyrirsagnir með hástöfum (UPPHITUN, AÐALÆFING …). Línur með 90+ verða rauðar, línur með hvíld gráar, og lína sem byrjar á `~` verður athugasemd. Til að feitletra skrifarðu `**orð**` eða `**heila línu**`.
+- **Snið:** Skrifaðu æfingar eins og á töfluna, ein lína í senn: `3 mín @ 60–65%`. Fyrirsagnir með hástöfum (UPPHITUN, AÐALÆFING …). Línur með 90+ verða rauðar, línur með hvíld gráar, og lína sem byrjar á `~` verður athugasemd. Til að feitletra skrifarðu `**orð**` eða `**heila línu**`. Þú skrifar alltaf í % (t.d. `@ 75–80%`), en iðkendur sjá æfingarnar í slögum (bpm) miðað við sinn hámarkspúls, með % smátt fyrir aftan.
 - **Setja inn BOX800 planið:** fyllir allar 10 æfingarnar í hópnum sem er valinn (hópar 2 og 4 fá útgáfu fyrir fjarþjálfun). Smelltu tvisvar og svo á **Vista æfingaplan**.
 - Fyrir prófin er takkinn **Nota lýsingu prófsins** sem fyllir út framkvæmdina.
 - **Afrita æfingar úr:** veldu annan hóp og smelltu tvisvar á **Afrita** til að fá æfingarnar hans. Breyttu svo því sem er öðruvísi og vistaðu.

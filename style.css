@@ -344,3 +344,7 @@ table.entry.codes select{min-width:180px}
 .beat span b{display:inline;margin:0}
 .ft strong{font-weight:800;color:var(--ink)}
 .ft-strong span,.ft-p.ft-strong{font-weight:800;color:var(--ink)}
+.bpm{white-space:nowrap}
+.pct{font-weight:500;font-size:.72em;color:var(--muted);white-space:nowrap}
+.ft-row.hot .pct{color:inherit;opacity:.75}
+.bpm-note{font-size:13.5px;color:var(--muted);margin:2px 0 10px}
