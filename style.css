@@ -395,3 +395,9 @@ table.entry.codes select{min-width:180px}
 .tm-b{appearance:none;border:0;background:#fff;color:#111;font:700 17px inherit;padding:12px 22px;border-radius:12px;cursor:pointer}
 .tm-b.ghost{background:rgba(255,255,255,.18);color:#fff}
 .beat .beat-last{display:block;margin-top:4px}
+.tm-ov .tm-bpm{font:800 clamp(48px,14vw,140px)/1 var(--display,inherit);background:#fff;color:#14202b;padding:.12em .38em;border-radius:.22em;margin:8px 0 4px;opacity:1;letter-spacing:-.01em;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.tm-ov.hot .tm-bpm{color:#c0392b}
+.tm-ov .tm-pct{font:700 clamp(18px,4.5vw,34px)/1.1 var(--display,inherit);opacity:.85}
+.tm-ov .tm-t{font-size:clamp(84px,22vw,220px)}
+.tm-ov .tm-bpm{font-size:clamp(48px,15vw,150px);white-space:nowrap}
+.tm-ov .tm-bpm small{font-size:.32em;font-weight:700;margin-left:.15em;letter-spacing:0}
