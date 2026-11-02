@@ -61,6 +61,7 @@ Vefsíða fyrir 5 vikna þolþjálfunina. Þú skráir niðurstöður beint á s
 - Iðkandi í fjarþjálfun getur aðeins breytt æfingatölunum sínum, ekki nafni eða hópi, og ekki hjá öðrum.
 - **Tæki í fjarþjálfun:** Æfingarnar má gera á 1, 2 eða 3 þoltækjum að eigin vali. Próf 1 er alltaf á Assault Bike. Í Prófi 2 velur hann tæki fyrir hvern af þremur hlutunum (BikeErg, RowErg, Assault Bike, SkiErg, hlaupabretti eða annað) og skráir kaloríurnar. Sama tæki og sama röð í viku 1 og viku 5.
 - **Samanburður í fjarhópum:** Þar sem tækin eru misjöfn ber „Þú og hópurinn“ saman **bætingu í %** í Prófi 1 og Prófi 2, ekki mínútur eða kaloríur.
+- **Klukka fyrir fjarhópa:** Í Vikan er takkinn **⏱ Klukka fyrir æfinguna**. Þar búa iðkendur til settið úr hlutum (tími og % fyrir hvern hluta), velja fjölda umferða og hvíld á milli. Takkinn **Sækja æfingu vikunnar** fyllir hlutana út úr aðalæfingunni í planinu. Klukkan sýnir % og þeirra púls í bpm, pípir síðustu 3 sekúndurnar og heldur skjánum vakandi.
 - **Leiðbeiningar fyrir fjarhópa:** Á síðu fjariðkenda er spjaldið **Svona tekur þú æfingarnar**. Þar er sagt frá þriðjudögum (hátt tempó, öndun og endurheimt í hvíldinni), fimmtudögum (jafn hraði, neföndun, hraðar á sama púlsi) og heimaæfingunni (zone 2, með þeirra eigin bpm).
 - **Heimaæfing (valfrjálst):** Fjariðkendur geta líka skráð rólegu heimaæfinguna (zone 2, 60–70%) í vikum 1–4 undir **Skrá æfingu** (mínútur, og valfrjálst meðalpúls, kaloríur og hvað þeir gerðu). Hún birtist í spjaldinu **Heimaæfingar** á síðu iðkandans en telst ekki með í æfingunum 10 eða meðaltali hópsins.
 

@@ -176,8 +176,8 @@ function render(){
  if(share.open&&!auth)closeShare();
  var me=auth&&!canEdit?byId(auth.who):null,selfOK=!!(me&&isRemote(me.group));
  var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['plan','Æfingaplan'],['coach','Skrá niðurstöður']]:auth?[['week','Vikan'],['hr','Púlstafla'],['athlete','Árangur'],['log','Æfingar']].concat(selfOK?[['self','Skrá<span class="t-wide"> æfingu</span>']]:[]):[];
- if(auth&&!canEdit){ui.sel=auth.who;if(!(ui.view==='week'||ui.view==='hr'||ui.view==='log'||ui.view==='athlete'||(ui.view==='self'&&selfOK)))ui.view='week'}
- if(canEdit&&/^(self|week|hr|log)$/.test(ui.view))ui.view='athlete';
+ if(auth&&!canEdit){ui.sel=auth.who;if(!(ui.view==='week'||ui.view==='hr'||ui.view==='log'||ui.view==='athlete'||(ui.view==='timer'&&selfOK)||(ui.view==='self'&&selfOK)))ui.view='week'}
+ if(canEdit&&/^(self|week|hr|log|timer)$/.test(ui.view))ui.view='athlete';
  var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="brand"><img class="brand-logo" src="logo-box800-white.png" alt="BOX800" width="533" height="309"><span class="eyebrow">Þjálfunarlota · 5 vikur</span></div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs'+(tabs.length>=5?' many':'')+'" role="tablist">';
  tabs.forEach(function(t){html+='<button class="tab" role="tab" data-act="view" data-v="'+t[0]+'" aria-selected="'+(ui.view===t[0])+'">'+t[1]+'</button>'});
  html+='</nav></div></header><main class="wrap">';
@@ -188,6 +188,7 @@ function render(){
  else if(ui.view==='team')html+=teamView();
  else if(ui.view==='self')html+=selfView();
  else if(ui.view==='week')html+=weekView();
+ else if(ui.view==='timer')html+=timerView();
  else if(ui.view==='hr')html+=hrView();
  else if(ui.view==='log')html+=logView();
  else if(ui.view==='plan'&&canEdit)html+=planView();
@@ -223,9 +224,81 @@ function athleteView(){
  html+='</div></section>'+formCard(x)+shareBar(x)+vsCard(x)+'<div class="grid2">'+test1Card(x)+test2Card(x)+'</div>'+(canEdit?thuCard(x)+sessionsCard(x)+homeCard(x):'');
  return html;
 }
+// ---------- Klukka (interval timer, fjarhópar) ----------
+var TM={cfg:null,seq:[],i:0,left:0,run:false,tick:null,end:0,ac:null,wl:null,hm:null};
+function tmLoad(){if(TM.cfg)return TM.cfg;var d={segs:[{d:60,p:'75–80%'},{d:120,p:'80–85%'},{d:60,p:'90%+'}],rounds:3,btw:120,prep:10};try{var v=JSON.parse(localStorage.getItem('tt-timer2')||'null');if(v&&v.segs&&v.segs.length)d=v}catch(e){}TM.cfg=d;return d}
+function tmSave(){try{localStorage.setItem('tt-timer2',JSON.stringify(TM.cfg))}catch(e){}}
+function tParse(v){v=String(v||'').trim().toLowerCase().replace(',','.');var m=v.match(/^(\d+)\s*(s|sek|sec)$/);if(m)return +m[1];m=v.match(/^(\d+(?:\.\d+)?)\s*(m|mín|min)$/);if(m)return Math.round(+m[1]*60);var t=parseTime(v);return t==null||isNaN(t)?null:t}
+function isRest(p){return!p||/hv[ií]ld|rest/i.test(p)}
+function tmSeq(c){var q=[];if(c.prep>0)q.push({ph:'prep',d:c.prep,p:''});for(var r=1;r<=c.rounds;r++){c.segs.forEach(function(g,k){if(g.d>0)q.push({ph:isRest(g.p)?'rest':'work',d:g.d,p:g.p,r:r,k:k})});if(r<c.rounds&&c.btw>0)q.push({ph:'btw',d:c.btw,p:'',r:r})}return q}
+function tmTotal(c){return tmSeq(c).reduce(function(t,x){return t+x.d},0)}
+function bpmOf(p){if(!TM.hm||!p)return'';var hm=TM.hm,b=function(x){return Math.round(hm*x/100)},m;
+ if((m=p.match(/(\d{2,3})\s*[–-]\s*(\d{2,3})/)))return b(+m[1])+'–'+b(+m[2])+' bpm';if((m=p.match(/(\d{2,3})\s*%?\s*\+/)))return b(+m[1])+'+ bpm';if((m=p.match(/(\d{2,3})\s*%/)))return b(+m[1])+' bpm';return''}
+function tmFromText(t){
+ var lines=String(t||'').split('\n').map(function(l){return l.trim()}),inMain=false,segs=[],rounds=null,btw=null;
+ lines.forEach(function(l){if(!l)return;var plain=l.replace(/\*\*/g,'');
+  if(isHead(plain)){inMain=/ÆFING|AÐAL|INTERVAL|SETT/i.test(plain)&&!/UPPHITUN|COOL|TEYGJ|FINISHER|HEIMA/i.test(plain);var rm=plain.match(/(\d+)\s*[x×]\s*\d/);if(inMain&&rm)rounds=+rm[1];return}
+  if(!inMain)return;if(/^~/.test(l))return;
+  var rm2=plain.match(/^(\d+)\s*[x×]\s*[\d(]/);if(rm2&&rounds==null){rounds=+rm2[1];return}
+  var dm=plain.match(/(\d+:\d{2}|\d+(?:[,.]\d+)?)(?:\s*[–-]\s*\d+(?:[,.]\d+)?)?\s*(mín|min|sek|s)\b/i);if(!dm)return;
+  var dv=dm[1].indexOf(':')>0?parseTime(dm[1]):Math.round(parseFloat(dm[1].replace(',','.'))*(/s/i.test(dm[2][0])&&!/mín|min/i.test(dm[2])?1:60));
+  var pm=plain.match(/(\d{2,3}\s*[–-]\s*\d{2,3}\s*%?|\d{2,3}\s*%\s*\+|\d{2,3}\s*\+\s*%|\d{2,3}\s*%|hv[ií]ld|MAX)/i),pp=pm?pm[1].replace(/\s+/g,''):'';
+  if(/^\d{2,3}[–-]\d{2,3}$/.test(pp))pp+='%';
+  if(isRest(pp)&&segs.length&&/milli|á milli/i.test(plain)){btw=dv;return}
+  segs.push({d:dv,p:/hv[ií]ld/i.test(pp)?'hvíld':pp})});
+ if(!segs.length)return null;
+ var last=segs[segs.length-1];if(isRest(last.p)&&btw==null){btw=last.d;segs.pop()}
+ return{segs:segs,rounds:rounds||1,btw:btw||0}}
+function timerView(){
+ var c=tmLoad(),a=byId(auth&&auth.who),x=a?data[a.id]||{}:{};TM.hm=hrMax(x);
+ var html='<section class="card timer-set"><h3>Klukka</h3><p class="desc">Búðu til settið úr hlutum, með tíma og % fyrir hvern hluta. Tími er skrifaður sem mín:sek, t.d. <b>1:00</b> eða <b>0:30</b>. Skrifaðu <b>hvíld</b> í %-reitinn fyrir hvíld.</p>';
+ var wk=a&&plan.week&&plan.week['g'+gid(a.group)];
+ if(wk){var its=weekItems(Number(wk)).filter(function(s){return s.type==='tue'||s.type==='thu'||s.type==='home'}),btns='';
+  its.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&s.type==='home'){var bh=boxPlan('g'+gid(a.group),s.k);if(bh)it=bh}if(it.text&&tmFromText(it.text))btns+='<button class="chip sm" data-act="tm-load" data-k="'+s.k+'">'+esc(s.short)+'</button>'});
+  if(btns)html+='<div class="tm-presets"><span>Sækja æfingu vikunnar:</span>'+btns+'</div>'}
+ html+='<div class="tm-segs"><div class="tm-sh"><span>#</span><span>Tími</span><span>% af hámarkspúls</span><span></span></div>';
+ c.segs.forEach(function(g,k){var bp=bpmOf(g.p);html+='<div class="tm-seg"><span class="tm-n">'+(k+1)+'</span><input class="tm-d" data-k="'+k+'" aria-label="Tími hluta '+(k+1)+'" value="'+esc(fmtTime(g.d))+'"><div class="tm-pc"><input class="tm-p" data-k="'+k+'" aria-label="% hluta '+(k+1)+'" placeholder="t.d. 75–80% eða hvíld" value="'+esc(g.p||'')+'">'+(bp?'<small>'+bp+'</small>':'')+'</div><button class="tm-x" data-act="tm-del" data-k="'+k+'" aria-label="Eyða hluta">✕</button></div>'});
+ html+='<button class="linkbtn" data-act="tm-add">+ Bæta við hluta</button></div>';
+ html+='<div class="self-grid"><label class="f" for="tm-rounds">Fjöldi umferða<input id="tm-rounds" class="tm-g" inputmode="numeric" value="'+c.rounds+'"></label><label class="f" for="tm-btw">Hvíld á milli umferða<input id="tm-btw" class="tm-g" value="'+fmtTime(c.btw)+'"></label><label class="f" for="tm-prep">Undirbúningur (sek)<input id="tm-prep" class="tm-g" inputmode="numeric" value="'+c.prep+'"></label></div>';
+ html+='<p class="trend" id="tm-total">Heildartími: <b class="num">'+fmtTime(tmTotal(c))+'</b>'+(TM.hm?' · Púlsinn miðast við hámarkspúls <b class="num">'+TM.hm+'</b>':' · Skráðu hámarkspúlsinn þinn í Púlstöflu til að sjá bpm')+'</p><div class="actions"><button class="btn" data-act="tm-start">▶ Byrja</button></div></section>';
+ return html;
+}
+function tmReadForm(silent){var c=tmLoad(),bad=null;
+ document.querySelectorAll('.tm-seg').forEach(function(row,k){var d=tParse(row.querySelector('.tm-d').value),pv=row.querySelector('.tm-p').value.trim();if(d==null||d<1){bad='Tími í hluta '+(k+1);return}if(c.segs[k]){c.segs[k].d=d;c.segs[k].p=pv}});
+ var r=parseInt((document.getElementById('tm-rounds')||{}).value,10),b=tParse((document.getElementById('tm-btw')||{}).value),pr=parseInt((document.getElementById('tm-prep')||{}).value,10);
+ if(!(r>=1&&r<=50))bad=bad||'Fjöldi umferða';else c.rounds=r;if(b==null||b<0)bad=bad||'Hvíld á milli umferða';else c.btw=b;c.prep=isNaN(pr)?0:Math.max(0,Math.min(60,pr));
+ if(bad&&!silent){toast('Athugaðu „'+bad+'“. Notaðu t.d. 1:00 eða 0:30.');return null}tmSave();return c}
+function tmRefresh(c){document.querySelectorAll('.tm-seg').forEach(function(row,k){var pc=row.querySelector('.tm-pc'),sm=pc.querySelector('small'),bp=bpmOf(c.segs[k]&&c.segs[k].p);if(bp){if(!sm){sm=document.createElement('small');pc.appendChild(sm)}sm.textContent=bp}else if(sm)sm.remove()});var t=document.querySelector('#tm-total b');if(t)t.textContent=fmtTime(tmTotal(c))}
+function tmBeep(f,d,v){try{if(!TM.ac)TM.ac=new(window.AudioContext||window.webkitAudioContext)();var o=TM.ac.createOscillator(),g=TM.ac.createGain();o.frequency.value=f;o.type='sine';o.connect(g);g.connect(TM.ac.destination);var t=TM.ac.currentTime;g.gain.setValueAtTime(v||0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.start(t);o.stop(t+d+0.02)}catch(e){}}
+var TM_NAME={prep:'GERÐU ÞIG TILBÚNA/N',work:'VINNA',rest:'HVÍLD',btw:'HVÍLD Á MILLI UMFERÐA'};
+function tmStart(){var c=tmReadForm();if(!c)return;TM.seq=tmSeq(c);if(!TM.seq.length)return;TM.i=0;TM.left=TM.seq[0].d;try{if(!TM.ac)TM.ac=new(window.AudioContext||window.webkitAudioContext)();TM.ac.resume&&TM.ac.resume()}catch(e){}
+ try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){TM.wl=l}).catch(function(){})}catch(e){}
+ tmOverlay();tmPlay();tmBeep(880,0.25)}
+function tmPlay(){TM.run=true;TM.end=Date.now()+TM.left*1000;clearInterval(TM.tick);TM.tick=setInterval(tmStep,200);tmDraw()}
+function tmPause(){TM.run=false;clearInterval(TM.tick);TM.left=Math.max(0,Math.ceil((TM.end-Date.now())/1000));tmDraw()}
+function tmNext(){TM.i++;if(TM.i>=TM.seq.length){tmDone();return}TM.left=TM.seq[TM.i].d;TM.end=Date.now()+TM.left*1000;var ph=TM.seq[TM.i].ph;tmBeep(ph==='work'?1046:660,ph==='work'?0.6:0.45,0.35);tmDraw()}
+function tmStep(){var l=Math.ceil((TM.end-Date.now())/1000);if(l!==TM.left){TM.left=l;if(l>0&&l<=3)tmBeep(740,0.15)}if(l<=0){tmNext();return}tmDraw()}
+function tmDone(){clearInterval(TM.tick);TM.run=false;TM.left=0;tmBeep(1046,0.3);setTimeout(function(){tmBeep(1318,0.6)},320);var o=document.getElementById('tm-ov');if(!o)return;o.className='tm-ov ph-done';o.querySelector('.tm-ph').textContent='BÚIÐ 💪';o.querySelector('.tm-t').textContent='0:00';o.querySelector('.tm-pct').textContent='Vel gert!';o.querySelector('.tm-bpm').textContent='';o.querySelector('.tm-meta').textContent='Mundu að skrá æfinguna';o.querySelector('.tm-next').textContent='';o.querySelector('[data-tm=pause]').style.display='none';o.querySelector('[data-tm=skip]').style.display='none'}
+function tmClose(){clearInterval(TM.tick);TM.run=false;try{TM.wl&&TM.wl.release()}catch(e){}TM.wl=null;var o=document.getElementById('tm-ov');if(o)o.remove();try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}}
+function tmOverlay(){var o=document.getElementById('tm-ov');if(o)o.remove();o=document.createElement('div');o.id='tm-ov';o.className='tm-ov';o.setAttribute('role','dialog');o.setAttribute('aria-label','Klukka');
+ o.innerHTML='<div class="tm-top"><button data-tm="fs" aria-label="Fullur skjár">⛶</button><button data-tm="close" aria-label="Loka">✕</button></div><div class="tm-ph"></div><div class="tm-t num"></div><div class="tm-pct"></div><div class="tm-bpm num"></div><div class="tm-meta"></div><div class="tm-bar"><i></i></div><div class="tm-next"></div><div class="tm-ctl"><button data-tm="pause" class="tm-b">❚❚ Hlé</button><button data-tm="skip" class="tm-b ghost">Sleppa ⏭</button></div>';
+ document.body.appendChild(o);
+ o.addEventListener('click',function(e){var b=e.target.closest('[data-tm]');if(!b)return;var k=b.getAttribute('data-tm');
+  if(k==='close')tmClose();else if(k==='pause'){if(TM.run)tmPause();else tmPlay()}else if(k==='skip'){if(!TM.run)tmPlay();tmNext()}else if(k==='fs'){try{if(document.fullscreenElement)document.exitFullscreen();else if(o.requestFullscreen)o.requestFullscreen()}catch(err){}}})}
+function segName(x){return x.ph==='work'?(x.p||'Vinna'):x.ph==='btw'?'Hvíld á milli umferða':'Hvíld'}
+function tmDraw(){var o=document.getElementById('tm-ov');if(!o)return;var cur=TM.seq[TM.i],c=TM.cfg,nx=TM.seq[TM.i+1];
+ o.className='tm-ov ph-'+cur.ph+(cur.ph==='work'&&isHot(cur.p||'')?' hot':'')+(TM.run?'':' paused');
+ o.querySelector('.tm-ph').textContent=TM_NAME[cur.ph]+(TM.run?'':' · HLÉ');
+ o.querySelector('.tm-t').textContent=fmtTime(Math.max(0,TM.left));
+ o.querySelector('.tm-pct').textContent=cur.ph==='work'&&cur.p?cur.p:'';
+ o.querySelector('.tm-bpm').textContent=cur.ph==='work'?bpmOf(cur.p):'';
+ o.querySelector('.tm-meta').textContent=cur.ph==='prep'?'Byrjum eftir augnablik':'Umferð '+cur.r+' af '+c.rounds+(cur.k!=null?' · Hluti '+(cur.k+1)+' af '+c.segs.length:'');
+ o.querySelector('.tm-next').textContent=nx?'Næst: '+segName(nx)+' · '+fmtTime(nx.d)+(nx.ph==='work'&&bpmOf(nx.p)?' · '+bpmOf(nx.p):''):'Síðasti hlutinn!';
+ o.querySelector('.tm-bar i').style.width=Math.max(0,Math.min(100,(1-TM.left/cur.d)*100))+'%';
+ var bp=o.querySelector('[data-tm=pause]');bp.textContent=TM.run?'❚❚ Hlé':'▶ Áfram';bp.style.display='';o.querySelector('[data-tm=skip]').style.display=''}
 function weekView(){
  var a=byId(auth.who);if(!a)return'';var wc=weekCard(a);
- return installCard()+(wc||'<section class="card"><h3>Æfingar vikunnar</h3><p class="desc">Þjálfarinn hefur ekki birt æfingar vikunnar enn.</p></section>');
+ return installCard()+(isRemote(a.group)?'<div class="timer-open"><button class="btn ghost" data-act="view" data-v="timer">⏱ Klukka fyrir æfinguna</button></div>':'')+(wc||'<section class="card"><h3>Æfingar vikunnar</h3><p class="desc">Þjálfarinn hefur ekki birt æfingar vikunnar enn.</p></section>');
 }
 function hrView(){var a=byId(auth.who);if(!a)return'';var x=data[a.id]||{};return hrCard(x,a)+guideCard(x,a)}
 function logView(){var a=byId(auth.who);if(!a)return'';var x=data[a.id]||{};team=teamFor(a);return thuCard(x)+sessionsCard(x)+homeCard(x)}
@@ -961,6 +1034,10 @@ app.addEventListener('click',function(e){
  if(act==='view'){ui.view=el.getAttribute('data-v');ui.pick=null;persistUi();render();window.scrollTo(0,0)}
  else if(act==='install-x'){try{localStorage.setItem('tt-install','0')}catch(e){}render()}
  else if(act==='kgroup'){var kv=el.getAttribute('data-g');ui.kgroup=kv==='all'?'all':Number(kv);if(kv!=='all')newGroup=kv;render()}
+ else if(act==='tm-start')tmStart();
+ else if(act==='tm-add'){var ca=tmReadForm(true);ca.segs.push({d:60,p:''});tmSave();render()}
+ else if(act==='tm-del'){var cd=tmReadForm(true),dk=Number(el.getAttribute('data-k'));if(cd.segs.length>1){cd.segs.splice(dk,1);tmSave();render()}else toast('Settið þarf að hafa að minnsta kosti einn hluta.')}
+ else if(act==='tm-load'){var la=byId(auth.who),lk=el.getAttribute('data-k'),lit=planItem(la.group,lk)||{};if(!lit.text){var lb=boxPlan('g'+gid(la.group),lk);if(lb)lit=lb}var lp=tmFromText(lit.text);if(lp){var cl=tmLoad();cl.segs=lp.segs;cl.rounds=lp.rounds;cl.btw=lp.btw;tmSave();render();toast('Æfingin sótt. Athugaðu hlutana og lagaðu ef þarf.')}}
  else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}
@@ -1017,6 +1094,7 @@ app.addEventListener('input',function(e){var t=e.target;
 });
 app.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();tryLogin()}else if(e.target.id==='pw-form'){e.preventDefault();pwLogin()}});
 app.addEventListener('change',function(e){var t=e.target;
+ if(t.classList&&(t.classList.contains('tm-d')||t.classList.contains('tm-p')||t.classList.contains('tm-g'))){var cr=tmReadForm(true);if(cr)tmRefresh(cr);return}
  if(t.dataset&&t.dataset.img){var ip=t.dataset.img.split('|');uploadPlanImage(ip[0],ip[1],t.files&&t.files[0]);return}
  if(t.id==='c-session'){ui.coachSession=t.value;persistUi();render()}
  else if(t.id==='c-group'){ui.egroup=t.value;render()}
