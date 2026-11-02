@@ -807,15 +807,18 @@ var BOX_PLAN={"inhouse": {"w1t1": {"title": "Próf 1 · Stigvaxandi þolpróf", 
 function boxPlan(g,k){var src=BOX_PLAN[isRemote(Number(String(g).slice(1)))?'remote':'inhouse'];return src[k]||null}
 var confirmFill=false;
 var TEST_TEXT={t1:'Upphitun 5–10 mín rólega.\nAssault-hjól: 1. mín 50 rpm, svo +2 rpm á mínútu upp í 60 rpm, eftir það +1 rpm á mínútu.\nHaltu RPM eins lengi og þú getur. Prófinu lýkur þegar þú dettur 2–3 rpm undir í meira en 5 sek.\nHvíldu í 1 mín eftir prófið og skráðu púlsinn.',t2:'Upphitun 10 mín.\n10 mín hámarkskaloríur á BikeErg, róðravél og Assault-hjóli.\nAðeins 20 sek hvíld á milli tækja.\nSama röð og sama hvíld á milli tækja í viku 1 og viku 5.'};
+function wkLabel(s,idx){if(s.type==='home')return'Zone 2';if(s.type==='t1')return'Próf 1';if(s.type==='t2')return'Próf 2';return'Æfing '+idx}
 function weekCard(a){
  if(!a)return'';var g='g'+gid(a.group),w=plan.week&&plan.week[g];if(!w)return'';
- var items=weekItems(Number(w));
- var html='',any=false;
- items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(s.type==='home'&&!it.text&&!it.title){var bh=boxPlan(g,s.k);if(bh)it={title:bh.title,text:bh.text,img:it.img}}if(!it.text&&!it.title&&!it.img)return;any=true;
-  html+='<div class="wk-item"><div class="wk-tag" style="background:'+color(s)+'">'+esc(s.short)+'</div><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?(FMT_HM=hrMax(data[a.id]||{}),fmtText(it.text)):'')+(THU_MIN[s.k]?beatBox(data[a.id]||{},s.k):'')+imgTag(g,s.k,it.img,'wk-img')+'</div></div>'});
- FMT_HM=null;if(!any)return'';
- var hmw=hrMax(data[a.id]||{});FMT_HM=null;
- return'<section class="card week-card"><div class="eyebrow-dark">Æfingar vikunnar · Vika '+w+'</div>'+(hmw?'<p class="bpm-note">Púlsinn er reiknaður út frá hámarkspúlsinum þínum, <b class="num">'+hmw+' bpm</b>. Prósentan stendur smátt fyrir aftan.</p>':'<p class="bpm-note">Skráðu hámarkspúlsinn þinn í <b>Púlstöflu</b> til að sjá æfingarnar í slögum (bpm) í stað %.</p>')+html+'</section>';
+ var items=weekItems(Number(w)),out=[],n=0;
+ items.forEach(function(s){var it=planItem(a.group,s.k)||{};if(s.type==='home'&&!it.text&&!it.title){var bh=boxPlan(g,s.k);if(bh)it={title:bh.title,text:bh.text,img:it.img}}if(!it.text&&!it.title&&!it.img)return;if(s.type==='tue'||s.type==='thu')n++;
+  out.push({s:s,lab:wkLabel(s,n),html:'<div class="wk-item"><div class="wk-body"><b>'+esc(it.title||s.label)+'</b>'+(it.text?(FMT_HM=hrMax(data[a.id]||{}),fmtText(it.text)):'')+(THU_MIN[s.k]?beatBox(data[a.id]||{},s.k):'')+imgTag(g,s.k,it.img,'wk-img')+'</div></div>'})});
+ FMT_HM=null;if(!out.length)return'';
+ var sel=out.filter(function(o){return o.s.k===ui.wkSel})[0];
+ if(!sel){var d=new Date().getDay(),pref=(d===1||d===2)?0:(d===3||d===4)?1:2;sel=out[Math.min(pref,out.length-1)];if(pref===2){var hz=out.filter(function(o){return o.s.type==='home'})[0];if(hz)sel=hz}}
+ var tabs=out.length>1?'<div class="wk-tabs" role="tablist">'+out.map(function(o){return'<button class="wk-tab" role="tab" data-act="wk-sel" data-k="'+o.s.k+'" aria-selected="'+(o===sel)+'" style="--c:'+color(o.s)+'">'+o.lab+'</button>'}).join('')+'</div>':'';
+ var hmw=hrMax(data[a.id]||{});
+ return'<section class="card week-card"><div class="eyebrow-dark">Æfingar vikunnar · Vika '+w+'</div>'+tabs+(hmw?'<p class="bpm-note">Púlsinn er reiknaður út frá hámarkspúlsinum þínum, <b class="num">'+hmw+' bpm</b>. Prósentan stendur smátt fyrir aftan.</p>':'<p class="bpm-note">Skráðu hámarkspúlsinn þinn í <b>Púlstöflu</b> til að sjá æfingarnar í slögum (bpm) í stað %.</p>')+sel.html+'</section>';
 }
 var IMG={},imgBusy=null;
 function imgKey(g,k){return'img-'+g+'-'+k}
@@ -1039,6 +1042,7 @@ app.addEventListener('click',function(e){
  else if(act==='tm-add'){var ca=tmReadForm(true);ca.segs.push({d:60,p:''});tmSave();render()}
  else if(act==='tm-del'){var cd=tmReadForm(true),dk=Number(el.getAttribute('data-k'));if(cd.segs.length>1){cd.segs.splice(dk,1);tmSave();render()}else toast('Settið þarf að hafa að minnsta kosti einn hluta.')}
  else if(act==='tm-load'){var la=canEdit?byId(ui.sel):byId(auth.who),lk=el.getAttribute('data-k'),lit=planItem(la.group,lk)||{};if(!lit.text){var lb=boxPlan('g'+gid(la.group),lk);if(lb)lit=lb}var lp=tmFromText(lit.text);if(lp){var cl=tmLoad();cl.segs=lp.segs;cl.rounds=lp.rounds;cl.btw=lp.btw;tmSave();render();toast('Æfingin sótt. Athugaðu hlutana og lagaðu ef þarf.')}}
+ else if(act==='wk-sel'){ui.wkSel=el.getAttribute('data-k');render()}
  else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}

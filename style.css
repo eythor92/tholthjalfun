@@ -401,3 +401,8 @@ table.entry.codes select{min-width:180px}
 .tm-ov .tm-t{font-size:clamp(84px,22vw,220px)}
 .tm-ov .tm-bpm{font-size:clamp(48px,15vw,150px);white-space:nowrap}
 .tm-ov .tm-bpm small{font-size:.32em;font-weight:700;margin-left:.15em;letter-spacing:0}
+.wk-tabs{display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap}
+.wk-tab{appearance:none;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-weight:700;font-size:15px;padding:8px 14px;border-radius:10px;cursor:pointer;flex:1 1 0;min-width:0;white-space:nowrap}
+.wk-tab[aria-selected="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.week-card .wk-item{display:block}
+.week-card .wk-item + .wk-item{border-top:0;padding-top:0;margin-top:0}
