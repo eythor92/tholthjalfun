@@ -177,7 +177,7 @@ function render(){
  var me=auth&&!canEdit?byId(auth.who):null,selfOK=!!(me&&isRemote(me.group));
  var tabs=canEdit?[['athlete','Iðkendur'],['team','Hóparnir'],['plan','Æfingaplan'],['coach','Skrá niðurstöður']]:auth?[['week','Vikan'],['hr','Púlstafla'],['athlete','Árangur'],['log','Æfingar']].concat(selfOK?[['self','Skrá<span class="t-wide"> æfingu</span>']]:[]):[];
  if(auth&&!canEdit){ui.sel=auth.who;if(!(ui.view==='week'||ui.view==='hr'||ui.view==='log'||ui.view==='athlete'||(ui.view==='timer'&&selfOK)||(ui.view==='self'&&selfOK)))ui.view='week'}
- if(canEdit&&/^(self|week|hr|log|timer)$/.test(ui.view))ui.view='athlete';
+ if(canEdit&&/^(self|week|hr|log)$/.test(ui.view))ui.view='athlete';
  var html='<header class="top"><svg class="ecg" viewBox="0 0 520 70" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--pulse)" stroke-width="2.5" stroke-linejoin="round" points="0,44 90,44 104,44 112,30 120,44 150,44 160,58 172,6 184,64 194,44 236,44 250,36 262,44 330,44 340,58 352,6 364,64 374,44 416,44 430,36 442,44 520,44"/></svg><div class="wrap"><div class="toprow"><div class="brand"><img class="brand-logo" src="logo-box800-white.png" alt="BOX800" width="533" height="309"><span class="eyebrow">Þjálfunarlota · 5 vikur</span></div>'+(auth?'<button class="logout" data-act="logout">'+(canEdit?'Þjálfari':esc(byId(auth.who).name))+' · Skrá út</button>':'')+'</div><h1>'+esc(state.project)+'</h1><nav class="tabs'+(tabs.length>=5?' many':'')+'" role="tablist">';
  tabs.forEach(function(t){html+='<button class="tab" role="tab" data-act="view" data-v="'+t[0]+'" aria-selected="'+(ui.view===t[0])+'">'+t[1]+'</button>'});
  html+='</nav></div></header><main class="wrap">';
@@ -216,7 +216,7 @@ function athleteView(){
  if(gid(a.group)!==ag){if(gl.length){a=gl[0];x=data[a.id]||{};ui.sel=a.id;team=teamFor(a)}else return html;}}
  var t1a=x.w1t1&&x.w1t1.min,t1b=x.w5t1&&x.w5t1.min,c1=total(x.w1t2),c5=total(x.w5t2);
  var d1=(t1a!=null&&t1b!=null)?t1b-t1a:null,d2=(c1!=null&&c5!=null)?c5-c1:null;
- html+=canEdit?weekCard(a)+hrCard(x,a)+guideCard(x,a):'';
+ html+=canEdit?(isRemote(a.group)?'<div class="timer-open"><button class="btn ghost" data-act="view" data-v="timer">⏱ Klukka</button></div>':'')+weekCard(a)+hrCard(x,a)+guideCard(x,a):'';
  html+='<section class="hero"><div><h2>'+esc(a.name)+'</h2><div class="sub">Próf í viku 1 borin saman við endurpróf í viku 5, auk allra æfinga þar á milli.</div></div><div class="stats">';
  html+=stat('Próf 1 · mínútur',d1!=null?'<span class="'+cls(d1)+'">'+sign(d1,fmtMin)+'</span>':(t1a!=null?'Mín '+t1a:'—'),t1a!=null?('Mín '+t1a+' · '+t1lab(x.w1t1)+(t1b!=null?' → mín '+t1b+' · '+t1lab(x.w5t1):' · endurpróf í viku 5')):'Ekki prófað enn');
  html+=stat('Próf 2 · samtals kal',d2!=null?'<span class="'+cls(d2)+'">'+sign(d2)+'</span>':(c1!=null?c1:'—'),c1!=null?(c1+(c5!=null?' → '+c5:' · endurpróf í viku 5')):'Ekki prófað enn');
@@ -250,8 +250,8 @@ function tmFromText(t){
  var last=segs[segs.length-1];if(isRest(last.p)&&btw==null){btw=last.d;segs.pop()}
  return{segs:segs,rounds:rounds||1,btw:btw||0}}
 function timerView(){
- var c=tmLoad(),a=byId(auth&&auth.who),x=a?data[a.id]||{}:{};TM.hm=hrMax(x);
- var html='<section class="card timer-set"><h3>Klukka</h3><p class="desc">Búðu til settið úr hlutum, með tíma og % fyrir hvern hluta. Tími er skrifaður sem mín:sek, t.d. <b>1:00</b> eða <b>0:30</b>. Skrifaðu <b>hvíld</b> í %-reitinn fyrir hvíld.</p>';
+ var c=tmLoad(),a=canEdit?byId(ui.sel):byId(auth&&auth.who),x=a?data[a.id]||{}:{};TM.hm=hrMax(x);
+ var html=(canEdit?'<div class="timer-open"><button class="btn ghost" data-act="view" data-v="athlete">← Til baka</button> <span class="desc">Svona sér '+esc(a?a.name:'')+' klukkuna.</span></div>':'')+'<section class="card timer-set"><h3>Klukka</h3><p class="desc">Búðu til settið úr hlutum, með tíma og % fyrir hvern hluta. Tími er skrifaður sem mín:sek, t.d. <b>1:00</b> eða <b>0:30</b>. Skrifaðu <b>hvíld</b> í %-reitinn fyrir hvíld.</p>';
  var wk=a&&plan.week&&plan.week['g'+gid(a.group)];
  if(wk){var its=weekItems(Number(wk)).filter(function(s){return s.type==='tue'||s.type==='thu'||s.type==='home'}),btns='';
   its.forEach(function(s){var it=planItem(a.group,s.k)||{};if(!it.text&&s.type==='home'){var bh=boxPlan('g'+gid(a.group),s.k);if(bh)it=bh}if(it.text&&tmFromText(it.text))btns+='<button class="chip sm" data-act="tm-load" data-k="'+s.k+'">'+esc(s.short)+'</button>'});
@@ -1037,7 +1037,7 @@ app.addEventListener('click',function(e){
  else if(act==='tm-start')tmStart();
  else if(act==='tm-add'){var ca=tmReadForm(true);ca.segs.push({d:60,p:''});tmSave();render()}
  else if(act==='tm-del'){var cd=tmReadForm(true),dk=Number(el.getAttribute('data-k'));if(cd.segs.length>1){cd.segs.splice(dk,1);tmSave();render()}else toast('Settið þarf að hafa að minnsta kosti einn hluta.')}
- else if(act==='tm-load'){var la=byId(auth.who),lk=el.getAttribute('data-k'),lit=planItem(la.group,lk)||{};if(!lit.text){var lb=boxPlan('g'+gid(la.group),lk);if(lb)lit=lb}var lp=tmFromText(lit.text);if(lp){var cl=tmLoad();cl.segs=lp.segs;cl.rounds=lp.rounds;cl.btw=lp.btw;tmSave();render();toast('Æfingin sótt. Athugaðu hlutana og lagaðu ef þarf.')}}
+ else if(act==='tm-load'){var la=canEdit?byId(ui.sel):byId(auth.who),lk=el.getAttribute('data-k'),lit=planItem(la.group,lk)||{};if(!lit.text){var lb=boxPlan('g'+gid(la.group),lk);if(lb)lit=lb}var lp=tmFromText(lit.text);if(lp){var cl=tmLoad();cl.segs=lp.segs;cl.rounds=lp.rounds;cl.btw=lp.btw;tmSave();render();toast('Æfingin sótt. Athugaðu hlutana og lagaðu ef þarf.')}}
  else if(act==='agroup'){ui.agroup=Number(el.getAttribute('data-g'));var fl=inGroup(ui.agroup);if(fl.length)ui.sel=fl[0].id;persistUi();render()}
  else if(act==='sel'){ui.sel=el.getAttribute('data-id');var sa=byId(ui.sel);if(sa)ui.agroup=gid(sa.group);ui.pick=null;if(el.getAttribute('data-go')){ui.view='athlete';window.scrollTo(0,0)}persistUi();render()}
  else if(act==='filter'){ui.filter=el.getAttribute('data-f');ui.pick=null;render()}
