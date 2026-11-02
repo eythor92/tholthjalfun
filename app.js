@@ -535,12 +535,12 @@ function sessionsCard(x){
   for(var i=SESSIONS.indexOf(s)-1;i>=0;i--){if(SESSIONS[i].type===s.type&&x[SESSIONS[i].k]){prev=SESSIONS[i];break}}
   html+='<div class="detail"><div class="t">Vika '+s.w+' · '+esc(s.label)+'</div>';
   if(s.type!=='t2')html+='<div class="m">Meðalpúls <b class="num">'+(v.avg!=null?v.avg:'—')+'</b>'+(hm&&v.avg?' <span class="num">('+Math.round(v.avg/hm*100)+'% af hámarki)</span>':'')+'</div>';
-  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div>'+(s.type!=='t2'&&s.type!=='t1'?'<div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>':'');
+  html+='<div class="m">Hámarkspúls <b class="num">'+(v.max!=null?v.max:'—')+'</b></div>'+(s.type!=='t2'&&s.type!=='t1'&&s.type!=='tue'&&s.type!=='thu'?'<div class="m">Heildarkaloríur <b class="num">'+(v.kcal!=null?v.kcal:'—')+'</b></div>':'');
   if(s.type==='t1'&&v.min!=null)html+='<div class="m">Kláraði <b class="num">mín '+v.min+' · '+t1lab(v)+'</b></div>';
   if(s.type==='t1'&&recov(v)!=null)html+='<div class="m">Endurheimt <b class="num">'+recov(v)+' slög</b> á 1 mín</div>';
   if(s.type==='t2'&&total(v)!=null){if(v.parts)v.parts.forEach(function(q,i){if(q&&q.c!=null)html+='<div class="m">'+(i+1)+'. '+esc(devName(q.m))+' <b class="num">'+q.c+'</b></div>'});else MACHINES.forEach(function(m){if(v[m[0]]!=null)html+='<div class="m">'+m[1]+' <b class="num">'+v[m[0]]+'</b></div>'});html+='<div class="m">Samtals á tækjum <b class="num">'+total(v)+'</b></div>'}
   var ts=tsess(pk);
-  if(ts&&(ts.avg!=null||ts.max!=null))html+='<div class="m team-line">Meðaltal hópsins: meðalpúls <b class="num">'+(ts.avg!=null?Math.round(ts.avg):'—')+'</b> · hámarkspúls <b class="num">'+(ts.max!=null?Math.round(ts.max):'—')+'</b>'+(ts.kcal!=null?' · kaloríur <b class="num">'+Math.round(ts.kcal)+'</b>':'')+'</div>';
+  if(ts&&(ts.avg!=null||ts.max!=null))html+='<div class="m team-line">Meðaltal hópsins: meðalpúls <b class="num">'+(ts.avg!=null?Math.round(ts.avg):'—')+'</b> · hámarkspúls <b class="num">'+(ts.max!=null?Math.round(ts.max):'—')+'</b>'+(ts.kcal!=null&&s.type!=='tue'&&s.type!=='thu'?' · kaloríur <b class="num">'+Math.round(ts.kcal)+'</b>':'')+'</div>';
   if(hasZones(v)){html+='<div class="zdetail"><div class="zlab">Þú</div>'+zoneBar(v,true)+(ts&&ts.zones?'<div class="zlab">Meðaltal hópsins</div>'+zoneBar(ts.zones):'')+'<div class="zlegend">'+ZK.map(function(k,i){return'<span><i class="sw zc'+(i+1)+'"></i>Svæði '+(i+1)+' <b class="num">'+Math.round((v[k]||0)/60)+' mín</b></span>'}).join('')+'</div></div>'}
   if(prev){var pv=x[prev.k];if(pv.avg!=null&&v.avg!=null)html+='<div class="m">Miðað við viku '+prev.w+': meðalpúls <b class="num">'+sign(v.avg-pv.avg)+'</b></div>'}
   html+='</div>';
@@ -596,12 +596,12 @@ function drawChart(){
  var lo=Math.floor((Math.min.apply(null,vals)-8)/10)*10,hi=Math.ceil((Math.max.apply(null,vals)+6)/10)*10;
  var y=function(v){return hb-(v-lo)/(hi-lo)*(hb-top)};
  var step=(W-pl-pr)/list.length,cx=function(i){return pl+step*(i+.5)};
- var km=0;list.forEach(function(s){var v=x[s.k];if(v&&v.kcal>km)km=v.kcal});
+ var km=0;list.forEach(function(s){var v=x[s.k];if(v&&v.kcal>km&&s.type!=='tue'&&s.type!=='thu')km=v.kcal});if(!km)H=hb+46;
  var pk=ui.pick&&x[ui.pick]?ui.pick:null;if(!pk){for(var j=list.length-1;j>=0;j--)if(x[list[j].k]){pk=list[j].k;break}}
  var tick=(hi-lo)>60?20:10,svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Púls og kaloríur á hverri æfingu">';
  list.forEach(function(s,i){if(s.k===pk)svg+='<rect x="'+(cx(i)-step/2+1)+'" y="4" width="'+(step-2)+'" height="'+(H-6)+'" rx="8" fill="var(--soft)"/>'});
  for(var t=lo;t<=hi;t+=tick){svg+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y(t)+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+t+'</text>'}
- svg+='<text x="'+(pl-6)+'" y="'+(kt-6)+'" text-anchor="end" font-size="10" fill="var(--muted)">kcal</text>';
+ if(km)svg+='<text x="'+(pl-6)+'" y="'+(kt-6)+'" text-anchor="end" font-size="10" fill="var(--muted)">kcal</text>';
  var fs=step<34?10:12;
  list.forEach(function(s,i){
   var v=x[s.k],c=color(s),X=cx(i);
@@ -610,7 +610,7 @@ function drawChart(){
    if(v.avg!=null&&v.max!=null)svg+='<line x1="'+X+'" x2="'+X+'" y1="'+y(v.avg)+'" y2="'+y(v.max)+'" stroke="'+c+'" stroke-width="3" stroke-linecap="round"/>';
    if(v.max!=null)svg+='<circle cx="'+X+'" cy="'+y(v.max)+'" r="5" fill="var(--surface)" stroke="'+c+'" stroke-width="2.5"/><text x="'+X+'" y="'+(y(v.max)-9)+'" text-anchor="middle" font-size="'+fs+'" font-weight="600" fill="var(--ink)">'+v.max+'</text>';
    if(v.avg!=null)svg+='<circle cx="'+X+'" cy="'+y(v.avg)+'" r="5.5" fill="'+c+'"/><text x="'+X+'" y="'+(y(v.avg)+18)+'" text-anchor="middle" font-size="'+fs+'" fill="var(--muted)">'+v.avg+'</text>';
-   if(v.kcal!=null&&km){var bw=Math.min(step*.55,28),bh=Math.max(2,v.kcal/km*(kb-kt));svg+='<rect x="'+(X-bw/2)+'" y="'+(kb-bh)+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+c+'" opacity=".35"/>';if(step>=30)svg+='<text x="'+X+'" y="'+(kb-bh-4)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+v.kcal+'</text>'}
+   if(v.kcal!=null&&km&&s.type!=='tue'&&s.type!=='thu'){var bw=Math.min(step*.55,28),bh=Math.max(2,v.kcal/km*(kb-kt));svg+='<rect x="'+(X-bw/2)+'" y="'+(kb-bh)+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+c+'" opacity=".35"/>';if(step>=30)svg+='<text x="'+X+'" y="'+(kb-bh-4)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+v.kcal+'</text>'}
   }else{svg+='<text x="'+X+'" y="'+((top+hb)/2)+'" text-anchor="middle" font-size="11" fill="var(--muted)">—</text>'}
   svg+='<text x="'+X+'" y="'+(H-14)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">V'+s.w+'</text><text x="'+X+'" y="'+(H-1)+'" text-anchor="middle" font-size="'+(step<40?9:11)+'" fill="'+c+'" font-weight="600">'+s.short+'</text>';
   svg+='<rect class="hit" data-act="pick" data-k="'+s.k+'" x="'+(X-step/2)+'" y="0" width="'+step+'" height="'+H+'" fill="transparent"/>';
@@ -660,7 +660,7 @@ function coachView(){
  var fields;
  if(s.type==='t1'){fields=[];for(var si=1;si<=NSTEPS;si++)fields.push(['s'+si,si+'<small>'+rpmFor(si)+' rpm</small>']);fields.push(['max','Hámarkspúls'],['rec','Púls 1 mín<small>eftir próf</small>'])}
  else if(s.type==='t2'){fields=[['max','Hámarkspúls']];MACHINES.forEach(function(m){fields.push([m[0],m[1]+' kal'])})}
- else fields=[['avg','Meðalpúls'],['max','Hámarkspúls'],['kcal','Heildarkal.']].concat(s.type==='thu'?[['mkcal','Kal á tækjum<small>öll sett samtals</small>']]:[]);
+ else fields=[['avg','Meðalpúls'],['max','Hámarkspúls']].concat(s.type==='thu'?[['mkcal','Kal á tækjum<small>öll sett samtals</small>']]:[]);
  var zon=!!ui.zones;try{if(ui.zones==null)zon=localStorage.getItem('tt-zones')==='1'}catch(e){}
  if(zon)fields=fields.concat(zf);
  var html='';
@@ -818,9 +818,9 @@ function selfFields(s){
  if(s.type==='t1'&&selfDev(s)==='tread')return[['min','Síðasta heila mínúta','Mín 1 = 8 km/klst, mín 2 = 8,5, mín 3 = 9 …'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Hvíldu þessa mínútu.']];
  if(s.type==='t1')return[['rpm','Síðasta RPM sem þú kláraðir'],['max','Hámarkspúls'],['rec','Púls 1 mín eftir próf (valfrjálst)','Púlsinn nákvæmlega 60 sekúndum eftir að þú hættir. Hvíldu þessa mínútu.']];
  if(s.type==='t2')return[['max','Hámarkspúls','Hæsti púls í prófinu, úr úrinu.']];
- if(s.type==='thu')return[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið sýnir.'],['mkcal','Kaloríur á tækjum (öll sett samtals)','Kaloríurnar sem tækið sýndi eftir hvert sett, lagðar saman. Þetta er talan sem þú reynir að slá næsta fimmtudag.']];
+ if(s.type==='thu')return[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['mkcal','Kaloríur á tækjum (öll sett samtals)','Kaloríurnar sem tækið sýndi eftir hvert sett, lagðar saman. Þetta er talan sem þú reynir að slá næsta fimmtudag.']];
  if(s.type==='home')return[['mins','Mínútur','Hve lengi æfingin var.'],['avg','Meðalpúls (valfrjálst)','Úr úrinu, ef þú varst með það.'],['kcal','Kaloríur (valfrjálst)','Úr úrinu, ef þú varst með það.']];
- var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.'],['kcal','Heildarkaloríur úr úrinu','Allar kaloríur fyrir æfinguna í heild, eins og úrið eða appið sýnir.']];
+ var f=[['avg','Meðalpúls','Úr úrinu, fyrir alla æfinguna.'],['max','Hámarkspúls','Hæsti púls á æfingunni.']];
  return f;
 }
 function selfDev(s){return'assault'}
