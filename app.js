@@ -349,7 +349,7 @@ function fmt1(n){return String(n).replace('.',',')}
 function lastThu(x,before){var best=null;['w2thu','w3thu','w4thu'].forEach(function(k){if(before&&k>=before)return;var v=x[k];if(kpm(k,v)!=null)best={k:k,v:v,w:Number(k[1]),kpm:kpm(k,v)}});return best}
 function beatBox(x,k){
  var p=lastThu(x,k);
- if(!p)return'<div class="beat"><b>🎯 Keppni við sjálfa/n þig</b><span>Skrifaðu niður kaloríurnar á tækinu eftir hvert sett og leggðu saman. Það er talan sem þú reynir að slá næsta fimmtudag.</span></div>';
+ if(!p)return'';
  return'<div class="beat"><b>🎯 Talan til að slá</b><span>Vika '+p.w+': <b class="num">'+fmt1(p.kpm)+' kal/mín</b>'+(p.v.avg!=null?' á meðalpúls <b class="num">'+p.v.avg+'</b>':'')+'. Náðu fleiri kaloríum á mínútu án þess að púlsinn hækki.</span></div>';
 }
 function thuCard(x){
